@@ -35,7 +35,7 @@ class Edlk_Settings_Page {
 		<p>投稿を先に開いて編集している人がいる間、他のユーザーの保存を確実にブロックします。WordPress標準の「編集中です」表示は残したまま、実際の保存競合だけを防ぎます。</p>
 
 		<strong>サポート</strong>
-		<p style="margin:6px 0 12px;">有償サポートやカスタマイズは<a href="https://etbs.jp/product-category/wordpress-tools/" target="_blank" rel="noopener">こちらのページ</a>からお問い合わせください。</p>
+		<p style="margin:6px 0 12px;">有償サポートやカスタマイズは<a href="https://etbs.jp/product-category/wordpress-tools/?utm_source=editlock&utm_medium=plugin" target="_blank" rel="noopener">こちらのページ</a>からお問い合わせください。開発の継続は<a href="https://etbs.jp/product/donate/?utm_source=editlock&utm_medium=plugin" target="_blank" rel="noopener">ご支援</a>で応援いただけます。</p>
 
 		<a href="<?php echo esc_url( $settings_url ); ?>" class="button button-primary">EditLock設定を開く</a>
 		<?php

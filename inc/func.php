@@ -382,3 +382,30 @@ if ( ! function_exists( 'edlk_rest_pre_dispatch_trash_gate' ) ) {
 	}
 	add_filter( 'rest_pre_dispatch', 'edlk_rest_pre_dispatch_trash_gate', 10, 3 );
 }
+
+/*-------------------------------------------*/
+/* 寄付・開発依頼リンク（プラグイン一覧行）
+/*-------------------------------------------*/
+if ( ! function_exists( 'edlk_plugin_row_meta' ) ) {
+	function edlk_plugin_row_meta( $links, $file ) {
+		if ( plugin_basename( EDLK_PLUGIN_FILE ) !== $file ) { return $links; }
+		$links[] = '<a href="https://etbs.jp/product/donate/?utm_source=editlock&utm_medium=plugin" target="_blank" rel="noopener noreferrer">'
+			. esc_html__( '開発を支援', 'editlock' ) . '</a>';
+		$links[] = '<a href="https://etbs.jp/product-category/wordpress-tools/?utm_source=editlock&utm_medium=plugin" target="_blank" rel="noopener noreferrer">'
+			. esc_html__( '開発のご依頼', 'editlock' ) . '</a>';
+		return $links;
+	}
+	add_filter( 'plugin_row_meta', 'edlk_plugin_row_meta', 10, 2 );
+}
+
+/*-------------------------------------------*/
+/* 寄付・開発依頼リンク（EditLock設定画面のフッター）
+/*-------------------------------------------*/
+if ( ! function_exists( 'edlk_admin_footer_text' ) ) {
+	function edlk_admin_footer_text( $text ) {
+		$screen = function_exists( 'get_current_screen' ) ? get_current_screen() : null;
+		if ( ! $screen || 'settings_page_edlk-settings' !== $screen->id ) { return $text; }
+		return 'EditLockが役に立ったら <a href="https://etbs.jp/product/donate/?utm_source=editlock&utm_medium=plugin" target="_blank" rel="noopener noreferrer">開発を支援</a>、カスタマイズは <a href="https://etbs.jp/product-category/wordpress-tools/?utm_source=editlock&utm_medium=plugin" target="_blank" rel="noopener noreferrer">開発のご依頼</a> からどうぞ。';
+	}
+	add_filter( 'admin_footer_text', 'edlk_admin_footer_text' );
+}
