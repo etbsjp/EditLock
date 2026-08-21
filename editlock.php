@@ -3,7 +3,6 @@
  * Plugin Name:       EditLock
  * Description:       他のユーザーが編集中の投稿への保存を実際にブロックする、投稿単位の排他ロックプラグイン
  * Version:           1.0.1
- * Requires at least: 6.7
  * Requires PHP:      7.4
  * Author:            DAI
  * Author URI:        https://etbs.jp
