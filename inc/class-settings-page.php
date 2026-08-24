@@ -7,7 +7,6 @@ class Edlk_Settings_Page {
 		add_action( 'admin_menu', [ __CLASS__, 'add_menu_page' ] );
 		add_action( 'admin_post_edlk_save_settings', [ __CLASS__, 'handle_save_settings' ] );
 		add_action( 'wp_ajax_edlk_force_release', [ __CLASS__, 'ajax_force_release' ] );
-		add_action( 'wp_dashboard_setup', [ __CLASS__, 'add_dashboard_widget' ] );
 	}
 
 	public static function add_menu_page() {
@@ -18,27 +17,6 @@ class Edlk_Settings_Page {
 			'edlk-settings',
 			[ __CLASS__, 'render_page' ]
 		);
-	}
-
-	public static function add_dashboard_widget() {
-		if ( ! current_user_can( 'manage_options' ) ) { return; }
-		wp_add_dashboard_widget(
-			'edlk_dashboard_widget',
-			'EditLock',
-			[ __CLASS__, 'render_dashboard_widget' ]
-		);
-	}
-
-	public static function render_dashboard_widget() {
-		$settings_url = admin_url( 'options-general.php?page=edlk-settings' );
-		?>
-		<p>投稿を先に開いて編集している人がいる間、他のユーザーの保存を確実にブロックします。WordPress標準の「編集中です」表示は残したまま、実際の保存競合だけを防ぎます。</p>
-
-		<strong>サポート</strong>
-		<p style="margin:6px 0 12px;">有償サポートやカスタマイズは<a href="https://etbs.jp/product-category/wordpress-tools/?utm_source=editlock&utm_medium=plugin" target="_blank" rel="noopener">こちらのページ</a>からお問い合わせください。開発の継続は<a href="https://etbs.jp/product/donate/?utm_source=editlock&utm_medium=plugin" target="_blank" rel="noopener">ご支援</a>で応援いただけます。</p>
-
-		<a href="<?php echo esc_url( $settings_url ); ?>" class="button button-primary">EditLock設定を開く</a>
-		<?php
 	}
 
 	public static function handle_save_settings() {
