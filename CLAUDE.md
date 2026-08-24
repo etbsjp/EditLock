@@ -50,8 +50,9 @@ CLI 検証では Local の php.ini を `-c` で渡すこと。渡さないと「
   `edlk_cleanup_cron`（自分で仕掛けた cron）
 
 ★ 「オプションを消していない」のは判断の結果であって書き忘れではない。逆に `DROP TABLE` と
-`wp_unschedule_hook()` を「方針違反」と読んで消さないこと。8本のうちテーブルと cron を
-持つのはこのプラグインだけで、そこだけが「消す」に該当する。
+`wp_unschedule_hook()` を「方針違反」と読んで消さないこと。独自テーブルと cron を持つのは
+8本のうちこのプラグインだけだが、「消す」に該当するのはこのプラグインと pageguard（別の理由で
+`pggd_lockouts` / `pggd_diagnosis_result` を消す）の2本で、他の6本は「何も消さない」が正しい。
 
 ## 版数
 
