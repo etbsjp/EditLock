@@ -6,7 +6,7 @@
  * Requires PHP:      7.4
  * Author:            DAI
  * Author URI:        https://etbs.jp
- * Plugin URI:        https://etbs.jp/product-category/wordpress-tools/
+ * Plugin URI:        https://etbs.jp/product/editlock/
  * License:           GPL-2.0-or-later
  * License URI:       https://www.gnu.org/licenses/gpl-2.0.html
  * Text Domain:       editlock
