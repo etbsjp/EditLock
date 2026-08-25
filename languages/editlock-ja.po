@@ -226,7 +226,7 @@ msgid "Move to Trash Blocked"
 msgstr "ゴミ箱への移動をブロックしました"
 
 #: inc/func.php:406
-msgid "Request Development"
+msgid "Request development"
 msgstr "開発のご依頼"
 
 #: inc/func.php:421
@@ -234,8 +234,8 @@ msgid "consider supporting its development"
 msgstr "開発を支援"
 
 #: inc/func.php:423
-msgid "request development"
-msgstr "開発を依頼"
+msgid "submit a request"
+msgstr "依頼"
 
 #. translators: %s: link to the donation page
 #: inc/func.php:427

@@ -403,7 +403,7 @@ if ( ! function_exists( 'edlk_plugin_row_meta' ) ) {
 	function edlk_plugin_row_meta( $links, $file ) {
 		if ( plugin_basename( EDLK_PLUGIN_FILE ) !== $file ) { return $links; }
 		$links[] = '<a href="https://etbs.jp/product-category/wordpress-tools/?utm_source=editlock&utm_medium=plugin" target="_blank" rel="noopener noreferrer">'
-			. esc_html__( 'Request Development', 'editlock' ) . '</a>';
+			. esc_html__( 'Request development', 'editlock' ) . '</a>';
 		return $links;
 	}
 	add_filter( 'plugin_row_meta', 'edlk_plugin_row_meta', 10, 2 );
@@ -420,7 +420,7 @@ if ( ! function_exists( 'edlk_admin_footer_text' ) ) {
 		$donate_link = '<a href="https://etbs.jp/product/donate/?utm_source=editlock&utm_medium=plugin" target="_blank" rel="noopener noreferrer">'
 			. esc_html__( 'consider supporting its development', 'editlock' ) . '</a>';
 		$request_link = '<a href="https://etbs.jp/product-category/wordpress-tools/?utm_source=editlock&utm_medium=plugin" target="_blank" rel="noopener noreferrer">'
-			. esc_html__( 'request development', 'editlock' ) . '</a>';
+			. esc_html__( 'submit a request', 'editlock' ) . '</a>';
 
 		return sprintf(
 			/* translators: %s: 開発支援リンク */
