@@ -25,15 +25,3 @@ require_once( dirname( __FILE__ ) . '/inc/func.php' );
 
 register_activation_hook( __FILE__, 'edlk_activate' );
 register_deactivation_hook( __FILE__, 'edlk_deactivate' );
-
-/*-------------------------------------------*/
-/*  プラグインのアップデートチェック
-/*-------------------------------------------*/
-require 'inc/plugin-update-checker/plugin-update-checker.php';
-use YahnisElsts\PluginUpdateChecker\v5\PucFactory;
-$myUpdateChecker = PucFactory::buildUpdateChecker(
-	'https://github.com/etbsjp/editlock/',
-	__FILE__,
-	'editlock'
-);
-$myUpdateChecker->setBranch( 'dist' );
