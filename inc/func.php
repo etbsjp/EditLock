@@ -8,6 +8,19 @@ require_once( dirname( __FILE__ ) . '/class-lock-manager.php' );
 require_once( dirname( __FILE__ ) . '/class-settings-page.php' );
 
 /*-------------------------------------------*/
+/* 翻訳ファイルの読み込み
+/* wordpress.org配布ではないため自動読み込み（just-in-time）の対象外。
+/* 同梱のlanguages/editlock-ja.moを確実に読ませるため明示的に読み込む。
+/* init以降で呼ぶ（それより早い呼び出しは_doing_it_wrongの対象になる）。
+/*-------------------------------------------*/
+if ( ! function_exists( 'edlk_load_textdomain' ) ) {
+	function edlk_load_textdomain() {
+		load_plugin_textdomain( 'editlock', false, dirname( plugin_basename( EDLK_PLUGIN_FILE ) ) . '/languages' );
+	}
+	add_action( 'init', 'edlk_load_textdomain' );
+}
+
+/*-------------------------------------------*/
 /* 有効化・無効化
 /*-------------------------------------------*/
 if ( ! function_exists( 'edlk_activate' ) ) {
@@ -29,7 +42,7 @@ if ( ! function_exists( 'edlk_add_cron_interval' ) ) {
 	function edlk_add_cron_interval( $schedules ) {
 		$schedules['edlk_ten_minutes'] = [
 			'interval' => 600,
-			'display'  => __( '10分ごと（EditLock）', 'editlock' ),
+			'display'  => __( 'Every 10 Minutes (EditLock)', 'editlock' ),
 		];
 		return $schedules;
 	}
@@ -119,10 +132,10 @@ if ( ! function_exists( 'edlk_enqueue_editor_script' ) ) {
 			'postId'     => (int) $post->ID,
 			'currentUid' => get_current_user_id(),
 			'i18n'       => [
-				'lockedTitle'   => __( '他のユーザーが編集中です', 'editlock' ),
-				'lockedBody'    => __( '%s さんがこの投稿を編集中のため、保存できません。相手の編集が終わるまでお待ちください。', 'editlock' ),
-				'lockedUnknown' => __( '他のユーザー', 'editlock' ),
-				'closeButton'   => __( '閉じる', 'editlock' ),
+				'lockedTitle'   => __( 'Another user is editing', 'editlock' ),
+				'lockedBody'    => __( '%s is currently editing this post, so you cannot save. Please wait until they are finished.', 'editlock' ),
+				'lockedUnknown' => __( 'Another user', 'editlock' ),
+				'closeButton'   => __( 'Close', 'editlock' ),
 			],
 		] );
 	}
@@ -138,12 +151,12 @@ if ( ! function_exists( 'edlk_ajax_acquire' ) ) {
 
 		$post_id = (int) ( $_POST['post_id'] ?? 0 );
 		if ( ! $post_id || ! current_user_can( 'edit_post', $post_id ) ) {
-			wp_send_json_error( [ 'message' => '権限がありません' ] );
+			wp_send_json_error( [ 'message' => __( 'You do not have permission to do this.', 'editlock' ) ] );
 		}
 
 		$session_id = sanitize_text_field( wp_unslash( $_POST['session_id'] ?? '' ) );
 		if ( '' === $session_id ) {
-			wp_send_json_error( [ 'message' => 'session_idが不正です' ] );
+			wp_send_json_error( [ 'message' => __( 'Invalid session ID.', 'editlock' ) ] );
 		}
 
 		$status = Edlk_Lock_Manager::acquire( $post_id, $session_id, get_current_user_id(), edlk_get_ttl() );
@@ -238,10 +251,10 @@ if ( ! function_exists( 'edlk_pre_post_update_gate' ) ) {
 		wp_die(
 			esc_html( sprintf(
 				/* translators: %s: ロックを保持しているユーザー名 */
-				__( '%s さんがこの投稿を編集中のため、保存できませんでした。ページを再読み込みしてやり直してください。', 'editlock' ),
-				$user ? $user->display_name : __( '他のユーザー', 'editlock' )
+				__( '%s is currently editing this post, so it could not be saved. Please reload the page and try again.', 'editlock' ),
+				$user ? $user->display_name : __( 'Another user', 'editlock' )
 			) ),
-			__( '保存をブロックしました', 'editlock' ),
+			__( 'Save Blocked', 'editlock' ),
 			[ 'response' => 409, 'back_link' => true ]
 		);
 	}
@@ -281,8 +294,8 @@ if ( ! function_exists( 'edlk_rest_pre_insert_gate' ) ) {
 			'edlk_locked',
 			sprintf(
 				/* translators: %s: ロックを保持しているユーザー名 */
-				__( '%s さんがこの投稿を編集中のため、保存できませんでした。', 'editlock' ),
-				$user ? $user->display_name : __( '他のユーザー', 'editlock' )
+				__( '%s is currently editing this post, so it could not be saved.', 'editlock' ),
+				$user ? $user->display_name : __( 'Another user', 'editlock' )
 			),
 			[ 'status' => 409 ]
 		);
@@ -322,10 +335,10 @@ if ( ! function_exists( 'edlk_pre_trash_post_gate' ) ) {
 		wp_die(
 			esc_html( sprintf(
 				/* translators: %s: ロックを保持しているユーザー名 */
-				__( '%s さんがこの投稿を編集中のため、ゴミ箱に移動できませんでした。', 'editlock' ),
-				$user ? $user->display_name : __( '他のユーザー', 'editlock' )
+				__( '%s is currently editing this post, so it could not be moved to trash.', 'editlock' ),
+				$user ? $user->display_name : __( 'Another user', 'editlock' )
 			) ),
-			__( 'ゴミ箱への移動をブロックしました', 'editlock' ),
+			__( 'Move to Trash Blocked', 'editlock' ),
 			[ 'response' => 409, 'back_link' => true ]
 		);
 	}
@@ -374,8 +387,8 @@ if ( ! function_exists( 'edlk_rest_pre_dispatch_trash_gate' ) ) {
 			'edlk_locked',
 			sprintf(
 				/* translators: %s: ロックを保持しているユーザー名 */
-				__( '%s さんがこの投稿を編集中のため、ゴミ箱に移動できませんでした。', 'editlock' ),
-				$user ? $user->display_name : __( '他のユーザー', 'editlock' )
+				__( '%s is currently editing this post, so it could not be moved to trash.', 'editlock' ),
+				$user ? $user->display_name : __( 'Another user', 'editlock' )
 			),
 			[ 'status' => 409 ]
 		);
@@ -390,7 +403,7 @@ if ( ! function_exists( 'edlk_plugin_row_meta' ) ) {
 	function edlk_plugin_row_meta( $links, $file ) {
 		if ( plugin_basename( EDLK_PLUGIN_FILE ) !== $file ) { return $links; }
 		$links[] = '<a href="https://etbs.jp/product-category/wordpress-tools/?utm_source=editlock&utm_medium=plugin" target="_blank" rel="noopener noreferrer">'
-			. esc_html__( '開発のご依頼', 'editlock' ) . '</a>';
+			. esc_html__( 'Request Development', 'editlock' ) . '</a>';
 		return $links;
 	}
 	add_filter( 'plugin_row_meta', 'edlk_plugin_row_meta', 10, 2 );
@@ -403,7 +416,21 @@ if ( ! function_exists( 'edlk_admin_footer_text' ) ) {
 	function edlk_admin_footer_text( $text ) {
 		$screen = function_exists( 'get_current_screen' ) ? get_current_screen() : null;
 		if ( ! $screen || 'settings_page_edlk-settings' !== $screen->id ) { return $text; }
-		return 'EditLockが役に立ったら <a href="https://etbs.jp/product/donate/?utm_source=editlock&utm_medium=plugin" target="_blank" rel="noopener noreferrer">開発を支援</a>、カスタマイズは <a href="https://etbs.jp/product-category/wordpress-tools/?utm_source=editlock&utm_medium=plugin" target="_blank" rel="noopener noreferrer">開発のご依頼</a> からどうぞ。';
+
+		$donate_link = '<a href="https://etbs.jp/product/donate/?utm_source=editlock&utm_medium=plugin" target="_blank" rel="noopener noreferrer">'
+			. esc_html__( 'consider supporting its development', 'editlock' ) . '</a>';
+		$request_link = '<a href="https://etbs.jp/product-category/wordpress-tools/?utm_source=editlock&utm_medium=plugin" target="_blank" rel="noopener noreferrer">'
+			. esc_html__( 'request development', 'editlock' ) . '</a>';
+
+		return sprintf(
+			/* translators: %s: 開発支援リンク */
+			__( 'If EditLock has been useful to you, please %s.', 'editlock' ),
+			$donate_link
+		) . ' ' . sprintf(
+			/* translators: %s: 開発依頼リンク */
+			__( 'For custom development, please %s.', 'editlock' ),
+			$request_link
+		);
 	}
 	add_filter( 'admin_footer_text', 'edlk_admin_footer_text' );
 }
