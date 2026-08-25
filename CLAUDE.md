@@ -172,6 +172,37 @@ grep -n  "^Stable tag:" readme.txt
 `.gitignore`（追跡させない）と `.gitattributes` の `export-ignore`（zip から落とす）は役割が別。
 両方を維持すること。
 
+### ★★★ 提出用 zip は `git archive` で作る
+
+```sh
+git archive --format=zip --prefix=editlock/ -o /tmp/editlock-<版数>.zip HEAD
+```
+
+`export-ignore` が効くのは **`git archive` と GitHub の zipball だけ**。`zip -r` や Finder の
+「圧縮」では `.git` / `.gitattributes` / `.gitignore` / `CLAUDE.md` が全部入る。
+
+★ Plugin Check を作業ディレクトリに掛けると `.git` と `.gitattributes` で `hidden_files` の
+**Error が2件**出る（`.gitignore` は検証環境では Warning だが、**production 環境では Error に昇格する**
+——`File_Type_Check.php:227` が `wp_get_environment_type()` を見ている）。
+**検査対象は必ず zip の展開物にすること。**
+
+★★ **本体クローンを検査対象にしない。** `.claude/worktrees/` にプラグイン一式のコピーが
+複数入っているため全件が二重計上され、`ai_instruction_directory` の指摘まで出る。
+
+★★★ **承認後の SVN import には `export-ignore` が一切効かない。** 作業ツリーをそのまま
+import すると `CLAUDE.md`（自社配布の実測サイト数・移行計画・社内レビュー体制）が公開され、
+**SVN は削除コミットを積んでも過去リビジョンを誰でも読める**。import 元は必ず
+`git archive` の展開物にすること → task-queue #36
+
+## ダッシュボードウィジェットを外したのは意図的
+
+`~/.claude/etbs-plugin-rules.md` の「サポート導線3面」はダッシュボードウィジェットを
+初版から入れると定めているが、**このプラグインだけは 1.1.0 で外した**（#1）。
+wordpress.org のガイドラインが管理画面の乗っ取り・一方的な広告を禁じているため。
+
+★ **横並びで揃えにきて戻さないこと。** 戻すと wp.org 側で指摘されうる。
+現在の自社リンクは「プラグイン一覧行」と「設定画面フッター」の2面だけが正しい。
+
 ## 宣言（Requires）の方針
 
 ★★ `Requires at least`（WP）は**実測した下限があるときだけ書く。無ければ書かない。**
