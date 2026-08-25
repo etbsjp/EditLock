@@ -82,10 +82,6 @@ Yes, deliberately. If the same user opens the same post in a second tab, the sec
 
 == Changelog ==
 
-* Removed the bundled Plugin Update Checker library as part of preparing for distribution through the WordPress.org plugin directory.
-* Removed the dashboard widget and the donation link on the Plugins list row; the plugin now surfaces only a "Request development" link on the Plugins list row and a support link in the settings page footer.
-* English is now the source language for every string shown in the UI; Japanese is provided as a translation (`languages/editlock-ja.po` / `.mo`).
-
 = 1.0.3 =
 * Fix: uninstalling the plugin no longer deletes settings you configured (lock expiration, excluded post types, trash guard). Only the plugin's own temporary lock data and its cleanup cron event are removed.
 
