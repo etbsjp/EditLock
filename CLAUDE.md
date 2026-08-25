@@ -31,6 +31,37 @@ CLI 検証では Local の php.ini を `-c` で渡すこと。渡さないと「
 **サイトが停止しているように見える**（実際は動いている）。`<runId>` は
 `ls -d ~/Library/Application\ Support/Local/run/*/mysql/mysqld.sock` で特定する。
 
+### ★★★ 実画面を見る前に、シンボリックリンクの向き先を必ず確認する
+
+作業エージェントは **worktree**（`<リポジトリ>/.claude/worktrees/agent-xxxx/`）の中で実装する。
+一方 Local サイトのプラグインは**本体クローンへの symlink** で、本体は `dist` のまま。
+
+```sh
+readlink "$HOME/Local Sites/editlock/app/public/wp-content/plugins/editlock"
+```
+
+→ **そのままでは、画面で見ているのは実装前のコード。** 2026-08-25 の #2（UI文言の英語化）で実際に起きた。
+PR 作成時点でサイト側に `languages/` も `Domain Path` も存在せず、「英語表示で日本語が出ないこと」の
+確認が**構造的に成立していなかった**。
+
+実画面が完了条件に入る issue では、検証の前に worktree へ張り替え、**終わったら必ず本体クローンへ戻す**:
+
+```sh
+P="$HOME/Local Sites/editlock/app/public/wp-content/plugins/editlock"
+ln -sfn ~/Downloads/GitHub/editlock/.claude/worktrees/agent-xxxx "$P"   # 検証前
+ln -sfn ~/Downloads/GitHub/editlock "$P"                                # 検証後（必須）
+```
+
+★ **#4 の Plugin Check も同じ罠を踏む。** 張り替えないと古いコードを検査して Error ゼロになる。
+
+### 文言の検証は PHP CLI で数値にできる（ブラウザ・ログイン不要）
+
+サイト稼働版の PHP は `lsof -p <php-fpm master PID> | grep lightning-services` で特定する
+（2026-08-25 時点で **8.3.17**）。`wp-load.php` を読み `switch_to_locale()` で切り替え、
+`.po` の msgid を全件 `__()` に通せば「英語で日本語0件／日本語で全件翻訳」が数で出る。
+`is_textdomain_loaded()` も併せて見ること。`set_current_screen()` を使うなら
+`wp-admin/includes/class-wp-screen.php` を先に require する。
+
 ## アンインストール
 
 ★ `uninstall.php` の方針は**案A**（task-queue #108）。判定は3分類。
@@ -56,6 +87,18 @@ CLI 検証では Local の php.ini を `-c` で渡すこと。渡さないと「
 
 ## 版数
 
+★★★ **実装の PR で版数を上げてはいけない。** 実装コミットだけを積むこと。
+
+- `dist` は配信先そのもの。版数を上げてマージした瞬間に、既存の自社配布ユーザー（2026-08-25 実測で
+  約19サイト）へ配られる
+- とくに公式ディレクトリ移行中は危険で、**PUC を撤去した版が配られると、以後こちらから更新も案内も
+  一切届かなくなる**（移行の案内を出す手段が消える）
+- 版数上げ・`dist` push は **engine を止めてから人が行う**（`~/.claude/etbs-plugin-rules.md`）
+- 公式化の直列では **1.1.0 への引き上げは #4 でまとめて行う**。#1〜#3 では触らない
+
+★ 2026-08-25 に #1 の PR で 1.0.3 → 1.0.4 に上げられ、マージ前に revert した実績がある。
+下の「2箇所を揃える」は**人がリリース時に上げるときの手順**であって、実装 PR の話ではない。
+
 版数の置き場は2箇所。**現在は一致している**が、上げる際は両方揃えること。
 
 - `editlock.php` の `Version:` ヘッダ
@@ -68,6 +111,22 @@ grep -nE "^ \* Version:|define\( 'EDLK_VERSION'" editlock.php
 
 `readme.txt` は無いため、置き場はこの2箇所だけ（ordermemo で踏んだ `ORMM_VERSION` の
 ヘッダとのずれと同じ構図が起きうるので、リリース時は必ず両方を grep で確認すること）。
+
+## PR の作法
+
+★★ **`Closes` / `Fixes` / `Resolves` を PR 本文に書かない。** 閉じるキーワードは**リポジトリを
+またいで効く**ため、親 issue に付くと1本のマージで無関係な issue まで閉じる。参照だけにすること。
+
+```
+対象 issue: https://github.com/etbsjp/EditLock/issues/2
+```
+
+★ **PR 本文の issue 参照は完全 URL、issue 本文の相互参照はベア `#NN`**（逆にしない）。
+★ 2026-08-25 の #1・#2 の PR で2回とも `Closes #N` が入っており、どちらも人が直している。
+
+★ **レビュー結果は必ず issue か PR のコメントとして残す。** PR 本文に「安藤 PASS」と書くだけでは
+記録にならない（#2 の PR は本文に4名分の実施状況を書いていたが、issue にも PR にもコメントが
+1件も無く、何をもって通したかを後から追えなかった）。
 
 ## 配布物
 
