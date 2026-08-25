@@ -24,7 +24,7 @@ EditLock adds a real, per-post exclusive lock on top of that notice. While one u
 * The lock is released automatically when the save succeeds, or when Heartbeat stops (for example the tab is closed) and the lock's expiration time passes.
 * The block is enforced on the server as well, on the Classic Editor's post save and the Block Editor's REST save, so the lock still holds even with JavaScript disabled or the connection unreliable.
 
-All public post types are covered by default; any post type can be excluded from the Settings screen. The lock check only runs at the moment Save/Update/Publish is clicked — simply opening the edit screen shows nothing extra.
+All post types that have an admin UI are covered by default (attachments are excluded); any of them can be excluded from the Settings screen. The lock check only runs at the moment Save/Update/Publish is clicked — simply opening the edit screen shows nothing extra.
 
 = Settings =
 
@@ -41,8 +41,9 @@ EditLock is intentionally strict and, as a result, has a few rough edges worth k
 
 1. **Block Editor trash notice.** When the "Move to trash" action is blocked, the server correctly rejects it (the post stays published), but the Block Editor itself may briefly show a "Moved to trash" success notice anyway. This is WordPress core's own optimistic UI, not a lock failure — reloading the post list confirms the post was never actually moved.
 2. **Bulk trash actions.** If the trash guard is enabled and a bulk "Move to Trash" action from the post list includes a locked post, processing stops at that post; posts later in the batch are left unprocessed.
-3. **No Multisite support.** Locks are not aware of, or shared across, sites in a Multisite network.
-4. **Locks apply to the holder too.** By design, even the user who holds the lock is blocked from saving the same post from a second tab or window. This is deliberate, not a bug — EditLock cannot tell two tabs from two different editors.
+3. **Permanent deletion bypasses the trash guard.** The trash guard only covers moves to the trash. A permanent delete that skips the trash entirely — for example `wp.deletePost` over XML-RPC on a custom post type, which WordPress core deletes outright instead of trashing — is not blocked, even while the post is locked.
+4. **No Multisite support.** Locks are not aware of, or shared across, sites in a Multisite network.
+5. **Locks apply to the holder too.** By design, even the user who holds the lock is blocked from saving the same post from a second tab or window. This is deliberate, not a bug — EditLock cannot tell two tabs from two different editors.
 
 == Installation ==
 
@@ -78,7 +79,7 @@ Yes, deliberately. If the same user opens the same post in a second tab, the sec
 2. The "Currently Locked Posts" table on the settings screen, listing each locked post with its editor, lock time, expiration, and a Force Release button.
 3. The save-blocked modal shown in the Classic Editor when another user already holds the lock on the post being saved.
 4. The save-blocked modal shown in the Block Editor (Gutenberg) when another user already holds the lock on the post being saved.
-5. The "Request development" link as it appears on the Plugins list row and in the Settings > EditLock page footer.
+5. The support links as they appear on the Plugins list row and in the footer of the Settings > EditLock screen.
 
 == Changelog ==
 

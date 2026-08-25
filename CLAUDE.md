@@ -99,18 +99,24 @@ ln -sfn ~/Downloads/GitHub/editlock "$P"                                # 検証
 ★ 2026-08-25 に #1 の PR で 1.0.3 → 1.0.4 に上げられ、マージ前に revert した実績がある。
 下の「2箇所を揃える」は**人がリリース時に上げるときの手順**であって、実装 PR の話ではない。
 
-版数の置き場は2箇所。**現在は一致している**が、上げる際は両方揃えること。
+★★★ **版数の置き場は3箇所。**（#3 で `readme.txt` を追加したため 2 → 3 に増えた）
 
 - `editlock.php` の `Version:` ヘッダ
 - `editlock.php` の `define( 'EDLK_VERSION', ... )`（`inc/func.php` で `wp_enqueue_script()` の
   キャッシュバスターとして使用中）
+- **`readme.txt` の `Stable tag:`**
+
+**現在は3箇所とも一致している**（1.0.3）。上げる際は3つとも揃えること。
 
 ```sh
 grep -nE "^ \* Version:|define\( 'EDLK_VERSION'" editlock.php
+grep -n  "^Stable tag:" readme.txt
 ```
 
-`readme.txt` は無いため、置き場はこの2箇所だけ（ordermemo で踏んだ `ORMM_VERSION` の
-ヘッダとのずれと同じ構図が起きうるので、リリース時は必ず両方を grep で確認すること）。
+★★ **`Stable tag` を揃え忘れると2通りに壊れる。** Plugin Check が `stable_tag_mismatch` を出して
+止まるか、気付かず wp.org の SVN へ上げた場合は **`Stable tag` が指すタグが配信版になる**ため、
+新版を上げたのに利用者には古い版が配られ続ける。ordermemo で踏んだ `ORMM_VERSION` のヘッダとの
+ずれと同じ構図なので、リリース時は必ず上の2本の grep を両方通すこと。
 
 ## PR の作法
 
