@@ -3,7 +3,7 @@ Contributors: etbsjp
 Donate link: https://etbs.jp/product/donate/
 Tags: post lock, concurrent editing, editorial workflow, multi author, save conflict
 Requires PHP: 7.4
-Tested up to: 7.0.2
+Tested up to: 7.1
 Stable tag: 1.0.3
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
