@@ -1,49 +1,90 @@
 <?php
-if ( ! defined( 'ABSPATH' ) ) { exit; }
+/**
+ * Renders and handles the EditLock settings screen.
+ *
+ * @package editlock
+ */
 
+if ( ! defined( 'ABSPATH' ) ) {
+	exit; // Exit if accessed directly.
+}
+
+/**
+ * Handles the Settings > EditLock admin screen: rendering, saving, and force-release AJAX.
+ */
 class Edlk_Settings_Page {
 
+	/**
+	 * Registers the hooks used by the settings screen.
+	 *
+	 * @return void
+	 */
 	public static function init() {
-		add_action( 'admin_menu', [ __CLASS__, 'add_menu_page' ] );
-		add_action( 'admin_post_edlk_save_settings', [ __CLASS__, 'handle_save_settings' ] );
-		add_action( 'wp_ajax_edlk_force_release', [ __CLASS__, 'ajax_force_release' ] );
+		add_action( 'admin_menu', array( __CLASS__, 'add_menu_page' ) );
+		add_action( 'admin_post_edlk_save_settings', array( __CLASS__, 'handle_save_settings' ) );
+		add_action( 'wp_ajax_edlk_force_release', array( __CLASS__, 'ajax_force_release' ) );
 	}
 
+	/**
+	 * Registers the Settings > EditLock submenu page.
+	 *
+	 * @return void
+	 */
 	public static function add_menu_page() {
 		add_options_page(
 			__( 'EditLock Settings', 'editlock' ),
 			'EditLock',
 			'manage_options',
 			'edlk-settings',
-			[ __CLASS__, 'render_page' ]
+			array( __CLASS__, 'render_page' )
 		);
 	}
 
+	/**
+	 * Handles the settings form submission.
+	 *
+	 * @return void
+	 */
 	public static function handle_save_settings() {
 		check_admin_referer( 'edlk_save_settings' );
 		if ( ! current_user_can( 'manage_options' ) ) {
 			wp_die( esc_html__( 'You do not have permission to do this.', 'editlock' ) );
 		}
 
-		$ttl = (int) ( $_POST['edlk_ttl_seconds'] ?? 120 );
+		$ttl = isset( $_POST['edlk_ttl_seconds'] ) ? absint( wp_unslash( $_POST['edlk_ttl_seconds'] ) ) : 120;
 		update_option( 'edlk_ttl_seconds', $ttl > 0 ? $ttl : 120 );
 
-		$excluded = array_map( 'sanitize_key', (array) ( $_POST['edlk_excluded_post_types'] ?? [] ) );
+		$excluded = isset( $_POST['edlk_excluded_post_types'] )
+			? array_map( 'sanitize_key', (array) wp_unslash( $_POST['edlk_excluded_post_types'] ) )
+			: array();
 		update_option( 'edlk_excluded_post_types', array_values( $excluded ) );
 
 		update_option( 'edlk_guard_trash', ! empty( $_POST['edlk_guard_trash'] ) );
 
-		wp_safe_redirect( add_query_arg( [ 'page' => 'edlk-settings', 'updated' => '1' ], admin_url( 'options-general.php' ) ) );
+		wp_safe_redirect(
+			add_query_arg(
+				array(
+					'page'    => 'edlk-settings',
+					'updated' => '1',
+				),
+				admin_url( 'options-general.php' )
+			)
+		);
 		exit;
 	}
 
+	/**
+	 * AJAX handler that force-releases a lock (administrators only).
+	 *
+	 * @return void
+	 */
 	public static function ajax_force_release() {
 		check_ajax_referer( 'edlk_force_release', 'nonce' );
 		if ( ! current_user_can( 'manage_options' ) ) {
 			wp_send_json_error( __( 'You do not have permission to do this.', 'editlock' ) );
 		}
 
-		$post_id = (int) ( $_POST['post_id'] ?? 0 );
+		$post_id = isset( $_POST['post_id'] ) ? absint( wp_unslash( $_POST['post_id'] ) ) : 0;
 		if ( ! $post_id ) {
 			wp_send_json_error( __( 'Invalid post ID.', 'editlock' ) );
 		}
@@ -52,15 +93,22 @@ class Edlk_Settings_Page {
 		wp_send_json_success();
 	}
 
+	/**
+	 * Renders the Settings > EditLock screen.
+	 *
+	 * @return void
+	 */
 	public static function render_page() {
-		if ( ! current_user_can( 'manage_options' ) ) { return; }
+		if ( ! current_user_can( 'manage_options' ) ) {
+			return;
+		}
 
-		$ttl              = edlk_get_ttl();
-		$excluded         = edlk_get_excluded_post_types();
-		$post_types       = edlk_get_editable_post_types();
-		$guard_trash      = edlk_is_trash_guard_enabled();
-		$active_locks     = Edlk_Lock_Manager::get_active_locks();
-		$force_nonce      = wp_create_nonce( 'edlk_force_release' );
+		$ttl          = edlk_get_ttl();
+		$excluded     = edlk_get_excluded_post_types();
+		$post_types   = edlk_get_editable_post_types();
+		$guard_trash  = edlk_is_trash_guard_enabled();
+		$active_locks = Edlk_Lock_Manager::get_active_locks();
+		$force_nonce  = wp_create_nonce( 'edlk_force_release' );
 		?>
 		<div class="wrap">
 			<h1><?php esc_html_e( 'EditLock Settings', 'editlock' ); ?></h1>
@@ -141,7 +189,8 @@ class Edlk_Settings_Page {
 					<?php if ( empty( $active_locks ) ) : ?>
 						<tr><td colspan="5"><?php esc_html_e( 'No posts are currently locked.', 'editlock' ); ?></td></tr>
 					<?php else : ?>
-						<?php foreach ( $active_locks as $lock ) :
+						<?php
+						foreach ( $active_locks as $lock ) :
 							$post = get_post( $lock['post_id'] );
 							$user = get_userdata( $lock['user_id'] );
 							?>
@@ -170,9 +219,10 @@ class Edlk_Settings_Page {
 				printf(
 					/* translators: %s: お問い合わせページへのリンク */
 					esc_html__( 'For paid support or custom development, please get in touch %s.', 'editlock' ),
-					'<a href="https://etbs.jp/product-category/wordpress-tools/" target="_blank" rel="noopener">' . esc_html__( 'via this page', 'editlock' ) . '</a>'
+					'<a href="https://etbs.jp/product-category/wordpress-tools/?utm_source=editlock&utm_medium=plugin" target="_blank" rel="noopener noreferrer">' . esc_html__( 'via this page', 'editlock' ) . '</a>'
 				);
-				?><br>
+				?>
+				<br>
 			</p>
 		</div>
 

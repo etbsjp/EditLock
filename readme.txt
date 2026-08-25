@@ -4,7 +4,7 @@ Donate link: https://etbs.jp/product/donate/
 Tags: post lock, concurrent editing, editorial workflow, multi author, save conflict
 Requires PHP: 7.4
 Tested up to: 7.1
-Stable tag: 1.0.3
+Stable tag: 1.1.0
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -82,6 +82,13 @@ Yes, deliberately. If the same user opens the same post in a second tab, the sec
 5. The support links as they appear on the Plugins list row and in the footer of the Settings > EditLock screen.
 
 == Changelog ==
+
+= 1.1.0 =
+* Translated all UI strings to English; Japanese is now provided via the bundled languages/editlock-ja.po and .mo files.
+* Removed the bundled update checker (plugin-update-checker).
+* Removed the dashboard widget.
+* Removed the donation link from the Plugins list row.
+* Changed the Plugin URI to the product page (https://etbs.jp/product/editlock/).
 
 = 1.0.3 =
 * Fix: uninstalling the plugin no longer deletes settings you configured (lock expiration, excluded post types). Only the plugin's own temporary lock data and its cleanup cron event are removed.
