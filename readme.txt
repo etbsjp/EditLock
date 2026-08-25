@@ -84,7 +84,7 @@ Yes, deliberately. If the same user opens the same post in a second tab, the sec
 == Changelog ==
 
 = 1.0.3 =
-* Fix: uninstalling the plugin no longer deletes settings you configured (lock expiration, excluded post types, trash guard). Only the plugin's own temporary lock data and its cleanup cron event are removed.
+* Fix: uninstalling the plugin no longer deletes settings you configured (lock expiration, excluded post types). Only the plugin's own temporary lock data and its cleanup cron event are removed.
 
 = 1.0.2 =
 * Removed the "Requires at least" (WordPress) declaration. No verified minimum WordPress version exists for the APIs this plugin uses.

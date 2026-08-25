@@ -170,9 +170,12 @@ grep -n  "^Stable tag:" readme.txt
   そのうえで保守方針として 7.4 を宣言している。次に見た人が「下限じゃないなら消せる」と
   判断しないよう、この理由を残しておく
 
-★ `README.md` の「必要環境」にもヘッダと同じ情報を書いている（利用者向けの説明のため）。
-**ヘッダの `Requires at least` / `Requires PHP` を変更したときは、`README.md` の該当箇所も
-同時に見直すこと。** `README.md` は `export-ignore` されておらず配布 zip に含まれるため、
+★★ **宣言の置き場は3つ。**（#3 で `readme.txt` を追加したため 2 → 3 に増えた）
+プラグインヘッダ／`README.md` の「必要環境」／**`readme.txt` の `Requires PHP:`**。
+**ヘッダの `Requires at least` / `Requires PHP` を変更したときは、`README.md` と `readme.txt` の
+該当箇所も同時に見直すこと。** ★とくに `readme.txt` 側は忘れやすいのに影響が大きい ——
+**PUC は `setInfoFromRemoteReadme()` で `readme.txt` の値をヘッダに上書きする**ため、
+readme が古いと配信判定まで古い値で動く（`~/.claude/etbs-plugin-rules.md`）。 `README.md` は `export-ignore` されておらず配布 zip に含まれるため、
 ヘッダだけ直しても README が古いままだと利用者には要件が伝わり続ける。揃えないまま放置すると、
 次に見た人がどちらが正しいか分からず、README に合わせてヘッダへ過剰宣言を書き戻す方向に
 動きかねない。
