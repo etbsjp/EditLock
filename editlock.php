@@ -1,7 +1,7 @@
 <?php
 /**
  * Plugin Name:       EditLock
- * Description:       他のユーザーが編集中の投稿への保存を実際にブロックする、投稿単位の排他ロックプラグイン
+ * Description:       A per-post exclusive lock plugin that actually blocks saving while another user is editing the post.
  * Version:           1.0.3
  * Requires PHP:      7.4
  * Author:            DAI
@@ -10,6 +10,7 @@
  * License:           GPL-2.0-or-later
  * License URI:       https://www.gnu.org/licenses/gpl-2.0.html
  * Text Domain:       editlock
+ * Domain Path:       /languages
  *
  * @package editlock
  */
