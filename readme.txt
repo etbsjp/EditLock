@@ -105,5 +105,8 @@ Yes, deliberately. If the same user opens the same post in a second tab, the sec
 
 == Upgrade Notice ==
 
+= 1.1.0 =
+This is the final update delivered from GitHub. EditLock is now on the WordPress.org plugin directory and updates arrive from there automatically from now on. No action is needed. ／ GitHub からお届けする最後の更新です。今後の更新は WordPress.org から自動で届きます。操作は不要です。
+
 = 1.0.3 =
 Uninstalling in earlier versions deleted your saved lock-expiration and excluded-post-type settings. Update to keep your settings when uninstalling.

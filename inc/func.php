@@ -15,9 +15,23 @@ require_once __DIR__ . '/class-edlk-settings-page.php';
 
 /*
  * 翻訳ファイルの読み込み
- * wordpress.org配布ではないため自動読み込み（just-in-time）の対象外。
- * 同梱のlanguages/editlock-ja.moを確実に読ませるため明示的に読み込む。
- * init以降で呼ぶ（それより早い呼び出しは_doing_it_wrongの対象になる）。
+ *
+ * ★★★ この呼び出しを消してはいけない。wordpress.org で公開したあとも同じ。
+ *
+ * WP_Textdomain_Registry::get_path_from_lang_dir() は WP_LANG_DIR/plugins を先に走査し、
+ * そこで見つからなかったときだけ custom_paths[$domain] へ落ちる。そして custom_paths を
+ * 設定するのは load_plugin_textdomain() 系だけ（wp-includes/l10n.php）。
+ * つまり自動読み込み（just-in-time）が面倒を見るのは wp-content/languages/plugins/ だけで、
+ * 同梱の languages/editlock-ja.mo はこの呼び出しが無いと永久に発見されない。
+ * しかもエラーは出ず、日本語表示が静かに全滅する。
+ *
+ * 逆に translate.wordpress.org の翻訳が WP_LANG_DIR/plugins に届けばそちらが優先されるので、
+ * 残しておいても wp.org 側の翻訳を邪魔しない。★残すのが安全、消すのが危険という非対称。
+ *
+ * Plugin Check は DiscouragedFunctions の Warning を出すが、申請はブロックしない。
+ * 判断の根拠は wp.org でホストされるかどうかではなく、.mo の置き場である。
+ *
+ * init 以降で呼ぶ（それより早い呼び出しは _doing_it_wrong の対象になる）。
  */
 if ( ! function_exists( 'edlk_load_textdomain' ) ) {
 	/**
