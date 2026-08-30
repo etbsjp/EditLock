@@ -64,10 +64,10 @@
 	acquire( function() {} );
 
 	/* ---------- Heartbeatで延長し、途中でロックを失っていないか監視 ---------- */
-	$( document ).on( 'heartbeat-send.editlock', function( e, data ) {
+	$( document ).on( 'heartbeat-send.edlk', function( e, data ) {
 		data.edlk = { post_id: postId, session_id: sessionId };
 	} );
-	$( document ).on( 'heartbeat-tick.editlock', function( e, data ) {
+	$( document ).on( 'heartbeat-tick.edlk', function( e, data ) {
 		if ( data && data.edlk && data.edlk.lost ) {
 			lockLostHolder = data.edlk.holderName || '';
 		} else {
@@ -137,7 +137,7 @@
 	if ( window.wp && wp.apiFetch ) {
 		wp.apiFetch.use( function( options, next ) {
 			options.headers = options.headers || {};
-			options.headers[ 'X-EditLock-Session' ] = sessionId;
+			options.headers[ 'X-Edlk-Session' ] = sessionId;
 			return next( options );
 		} );
 	}

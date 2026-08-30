@@ -1,0 +1,65 @@
+/* ==========================================================================
+   Settings screen (Settings > Edit Conflict Guard)
+   設定画面（設定 > Edit Conflict Guard）
+   ========================================================================== */
+
+.edlk-settings {
+	/* WordPress admin palette. Kept local because these are only used here. */
+	/* WordPress 管理画面のパレット。ここでしか使わないためローカルに置く。 */
+	--edlk-panel-bg: #f6f7f7;
+	--edlk-border: #c3c4c7;
+	--edlk-text-muted: #50575e;
+	--edlk-danger: #d63638;
+	--edlk-warning: #b45309;
+}
+
+/* Intro panel（画面上部の説明パネル）
+   ========================================================================== */
+
+.edlk-intro {
+	margin: 12px 0 20px;
+	padding: 12px 16px;
+	border: 1px solid var(--edlk-border);
+	border-radius: 4px;
+	background: var(--edlk-panel-bg);
+}
+
+.edlk-intro p {
+	margin: 0 0 8px;
+}
+
+.edlk-intro p:last-child {
+	margin-bottom: 0;
+}
+
+/* Form controls（フォーム部品）
+   ========================================================================== */
+
+.edlk-checkbox-row {
+	display: block;
+	margin-bottom: 4px;
+}
+
+.edlk-note-warning {
+	color: var(--edlk-warning);
+}
+
+/* Locked posts table（ロック中の投稿一覧）
+   ========================================================================== */
+
+.edlk-force-release {
+	color: var(--edlk-danger);
+	border-color: var(--edlk-danger);
+}
+
+/* Footnotes（画面下部の補足）
+   ========================================================================== */
+
+.edlk-footnote {
+	font-size: 14px;
+	color: var(--edlk-text-muted);
+}
+
+.edlk-footnote--spaced {
+	margin-top: 40px;
+}

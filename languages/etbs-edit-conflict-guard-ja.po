@@ -1,6 +1,6 @@
 msgid ""
 msgstr ""
-"Project-Id-Version: EditLock 1.0.3\n"
+"Project-Id-Version: ETBS Edit Conflict Guard 1.1.0\n"
 "Report-Msgid-Bugs-To: https://etbs.jp/product-category/wordpress-tools/\n"
 "POT-Creation-Date: 2026-08-25 00:00+0900\n"
 "PO-Revision-Date: 2026-08-25 00:00+0900\n"
@@ -12,17 +12,21 @@ msgstr ""
 "Content-Transfer-Encoding: 8bit\n"
 "Plural-Forms: nplurals=1; plural=0;\n"
 "X-Generator: manual\n"
-"X-Domain: editlock\n"
+"X-Domain: etbs-edit-conflict-guard\n"
 
 #. Description of the plugin
-#: editlock.php
+#: etbs-edit-conflict-guard.php
 msgid "A per-post exclusive lock plugin that actually blocks saving while another user is editing the post."
 msgstr "他のユーザーが編集中の投稿への保存を実際にブロックする、投稿単位の排他ロックプラグイン"
 
 #: inc/class-settings-page.php:14
 #: inc/class-settings-page.php:66
-msgid "EditLock Settings"
-msgstr "EditLock 設定"
+msgid "Edit Conflict Guard Settings"
+msgstr "Edit Conflict Guard 設定"
+
+#: inc/class-edlk-settings-page.php
+msgid "Edit Conflict Guard"
+msgstr "Edit Conflict Guard"
 
 #: inc/class-settings-page.php:25
 #: inc/class-settings-page.php:43
@@ -39,8 +43,8 @@ msgid "Settings saved."
 msgstr "設定を保存しました。"
 
 #: inc/class-settings-page.php:74
-msgid "EditLock reliably blocks other users from saving while someone already has a post open for editing."
-msgstr "EditLockは、投稿を先に開いて編集している人がいる間、他のユーザーの保存を確実にブロックします。"
+msgid "Edit Conflict Guard reliably blocks other users from saving while someone already has a post open for editing."
+msgstr "Edit Conflict Guard は、投稿を先に開いて編集している人がいる間、他のユーザーの保存を確実にブロックします。"
 
 #: inc/class-settings-page.php:75
 msgid "It keeps the standard WordPress \"currently editing\" notice as-is, and only prevents the actual save conflict."
@@ -71,8 +75,8 @@ msgid "Post types to exclude"
 msgstr "対象から除外する投稿タイプ"
 
 #: inc/class-settings-page.php:107
-msgid "Checked post types are excluded from EditLock (all unchecked types are included)."
-msgstr "チェックした投稿タイプはEditLockの対象外になります（未チェックのタイプは全て対象）。"
+msgid "Checked post types are excluded from locking (all unchecked types are included)."
+msgstr "チェックした投稿タイプはロックの対象外になります（未チェックのタイプは全て対象）。"
 
 #: inc/class-settings-page.php:111
 msgid "Moving to trash"
@@ -173,8 +177,8 @@ msgid "Failed to release the lock."
 msgstr "解除に失敗しました"
 
 #: inc/func.php:45
-msgid "Every 10 Minutes (EditLock)"
-msgstr "10分ごと（EditLock）"
+msgid "Every 10 Minutes (Edit Conflict Guard)"
+msgstr "10分ごと（Edit Conflict Guard）"
 
 #: inc/func.php:135
 msgid "Another user is editing"
@@ -239,8 +243,8 @@ msgstr "依頼"
 
 #. translators: %s: link to the donation page
 #: inc/func.php:427
-msgid "If EditLock has been useful to you, please %s."
-msgstr "EditLockが役に立ったら、%sしてください。"
+msgid "If Edit Conflict Guard has been useful to you, please %s."
+msgstr "Edit Conflict Guard が役に立ったら、%sしてください。"
 
 #. translators: %s: link to the development request page
 #: inc/func.php:431

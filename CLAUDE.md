@@ -1,4 +1,16 @@
-# EditLock
+# ETBS Edit Conflict Guard（旧 EditLock）
+
+★★★ **2026-08-31 に改名した。** wordpress.org の人手レビューで「`EditLock` は既存の
+`Edit Lock`（slug `edit-lock`）と紛らわしい」と指摘され、名前とスラッグを変更した。
+
+| | 旧 | 新 |
+|---|---|---|
+| 表示名 | EditLock | **ETBS Edit Conflict Guard** |
+| スラッグ／フォルダ／テキストドメイン | `editlock` | **`etbs-edit-conflict-guard`** |
+| メインファイル | `editlock.php` | **`etbs-edit-conflict-guard.php`** |
+| 関数・定数・オプションの接頭辞 | `edlk_` / `EDLK_` | **変更なし**（スラッグ由来ではないため。既存サイトの設定が残る） |
+
+★ `dist`（1.0.3）は**旧名のまま**。改名したのは wp.org 版だけで、両者は WordPress から見て別プラグイン。
 
 etbs が配布する WordPress プラグイン。共通ルールの正本は `~/.claude/etbs-plugin-rules.md`。
 
@@ -110,38 +122,39 @@ ln -sfn ~/Downloads/GitHub/editlock "$P"                                # 検証
 PR は開けたまま #36 の申請が通るのを待つ。** タスクが `status:waiting-merge` で長く止まるのは想定どおりで、
 停滞ではない。
 
-理由は「更新経路が消えるから」ではない。**経路は wp.org へ移る。** コアの更新チェックは
-インストール済みプラグインを**フォルダ名（スラッグ）**で api.wordpress.org に照会し、PUC は
-`upgrader_source_selection` の `fixDirectoryName` で展開先を `editlock` に揃えている（`UpdateChecker.php:168`）。
-だから wp.org に `editlock` が公開された時点で、コアが自動的に更新を配り始める。
+★★★ **改名によって「引き渡し」は成立しなくなった（2026-08-31）。**
 
-順序を守る理由は次の2つ。
+コアの更新チェックはインストール済みプラグインを**フォルダ名（スラッグ）**で api.wordpress.org に
+照会する。既存 約19サイトのフォルダは `editlock`、wp.org 版は `etbs-edit-conflict-guard` なので、
+**この2つは永久に繋がらない。**
 
-- **空白期間** … 1.1.0 を配ってから wp.org が公開されるまで、既存 約19サイトは**どこからも更新を受け取れない**
-- ★★★ **スラッグの乗っ取り** … 先に PUC を外した状態で**他人が `editlock` を wp.org で取得**すると、
-  コアは**その他人のプラグインを「更新」として既存サイトへ配る**。供給経路の乗っ取りが成立する。
-  `editlock` は 2026-08-25 時点で空いている（plugins API が `Plugin not found.`）が、押さえたのは申請が通ってから
+→ 以前ここに書いていた「公開後に 1.1.0 を `dist` へマージすれば既存サイトが wp.org に移る」は**誤り**。
+そのまま実行すると19サイトは PUC を失うだけで、更新経路がゼロになる。
 
-★ 公開後に 1.1.0 を `dist` へマージするのは「引き渡しリリース」として必要。これを配って初めて
-既存サイトの PUC が外れ、以後コアが wp.org から配るようになる。**マージしないままだと誰も移らない。**
+**決定（2026-08-31）：`dist` は 1.0.3 のまま PUC 付きで凍結する。**
+移行は将来 `dist` 側に 1.0.4 を出し、管理画面の notice で wp.org 版への入れ替えを案内して行う。
+PUC を残すので空白期間は発生しない。
 
-★ あわせて、公開と同時に `https://etbs.jp/product/editlock/` の配布物（¥0 の Downloads 節）を
-wp.org へ向け直すこと。放置すると新規の利用者が自社配布版を掴み続ける。
+★ 乗っ取りリスクは残るが、想定より小さい。今回の審査で `editlock` は `edit-lock` との類似を理由に
+弾かれており、同じ門は他人にも立つ【推測】。ただしスラッグは返信で個別に要求できるためゼロではない。
+
+★ あわせて `https://etbs.jp/product/editlock/` は `https://etbs.jp/product/etbs-edit-conflict-guard/`
+へ作り直すこと（`Plugin URI:` がこの URL を指している）。
 
 ★ 2026-08-25 に #1 の PR で 1.0.3 → 1.0.4 に上げられ、マージ前に revert した実績がある。
 下の「版数の置き場は3箇所」は**人がリリース時に上げるときの手順**であって、実装 PR の話ではない。
 
 ★★★ **版数の置き場は3箇所。**（#3 で `readme.txt` を追加したため 2 → 3 に増えた）
 
-- `editlock.php` の `Version:` ヘッダ
-- `editlock.php` の `define( 'EDLK_VERSION', ... )`（`inc/func.php` で `wp_enqueue_script()` の
+- `etbs-edit-conflict-guard.php` の `Version:` ヘッダ
+- `etbs-edit-conflict-guard.php` の `define( 'EDLK_VERSION', ... )`（`inc/func.php` で `wp_enqueue_script()` の
   キャッシュバスターとして使用中）
 - **`readme.txt` の `Stable tag:`**
 
-**現在は3箇所とも一致している**（1.0.3）。上げる際は3つとも揃えること。
+**現在は3箇所とも一致している**（PR #10 上では 1.1.0、`dist` 上では 1.0.3）。上げる際は3つとも揃えること。
 
 ```sh
-grep -nE "^ \* Version:|define\( 'EDLK_VERSION'" editlock.php
+grep -nE "^ \* Version:|define\( 'EDLK_VERSION'" etbs-edit-conflict-guard.php
 grep -n  "^Stable tag:" readme.txt
 ```
 

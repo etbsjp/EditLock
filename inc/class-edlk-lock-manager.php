@@ -2,7 +2,7 @@
 /**
  * Handles the custom lock table used to track which post is being edited by whom.
  *
- * @package editlock
+ * @package etbs-edit-conflict-guard
  */
 
 if ( ! defined( 'ABSPATH' ) ) {

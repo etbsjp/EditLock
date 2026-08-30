@@ -1,8 +1,8 @@
 <?php
 /**
- * Core functions and hooks for EditLock.
+ * Core functions and hooks for Edit Conflict Guard.
  *
- * @package editlock
+ * @package etbs-edit-conflict-guard
  */
 
 if ( ! defined( 'ABSPATH' ) ) {
@@ -14,36 +14,14 @@ require_once __DIR__ . '/class-edlk-lock-manager.php';
 require_once __DIR__ . '/class-edlk-settings-page.php';
 
 /*
- * 翻訳ファイルの読み込み
+ * Translations are delivered by translate.wordpress.org and land in WP_LANG_DIR/plugins,
+ * where WordPress loads them just in time. No translation files are bundled with this
+ * plugin, so load_plugin_textdomain() and the Domain Path header are unnecessary here.
  *
- * ★★★ この呼び出しを消してはいけない。wordpress.org で公開したあとも同じ。
- *
- * WP_Textdomain_Registry::get_path_from_lang_dir() は WP_LANG_DIR/plugins を先に走査し、
- * そこで見つからなかったときだけ custom_paths[$domain] へ落ちる。そして custom_paths を
- * 設定するのは load_plugin_textdomain() 系だけ（wp-includes/l10n.php）。
- * つまり自動読み込み（just-in-time）が面倒を見るのは wp-content/languages/plugins/ だけで、
- * 同梱の languages/editlock-ja.mo はこの呼び出しが無いと永久に発見されない。
- * しかもエラーは出ず、日本語表示が静かに全滅する。
- *
- * 逆に translate.wordpress.org の翻訳が WP_LANG_DIR/plugins に届けばそちらが優先されるので、
- * 残しておいても wp.org 側の翻訳を邪魔しない。★残すのが安全、消すのが危険という非対称。
- *
- * Plugin Check は DiscouragedFunctions の Warning を出すが、申請はブロックしない。
- * 判断の根拠は wp.org でホストされるかどうかではなく、.mo の置き場である。
- *
- * init 以降で呼ぶ（それより早い呼び出しは _doing_it_wrong の対象になる）。
+ * 翻訳は translate.wordpress.org から WP_LANG_DIR/plugins に届き、WordPress が
+ * just-in-time で読み込む。同梱の翻訳ファイルは持たないため、load_plugin_textdomain()
+ * と Domain Path ヘッダはこのプラグインには不要。
  */
-if ( ! function_exists( 'edlk_load_textdomain' ) ) {
-	/**
-	 * Loads the plugin's translation files.
-	 *
-	 * @return void
-	 */
-	function edlk_load_textdomain() {
-		load_plugin_textdomain( 'editlock', false, dirname( plugin_basename( EDLK_PLUGIN_FILE ) ) . '/languages' );
-	}
-	add_action( 'init', 'edlk_load_textdomain' );
-}
 
 // 有効化・無効化.
 if ( ! function_exists( 'edlk_activate' ) ) {
@@ -81,7 +59,7 @@ if ( ! function_exists( 'edlk_add_cron_interval' ) ) {
 	function edlk_add_cron_interval( $schedules ) {
 		$schedules['edlk_ten_minutes'] = array(
 			'interval' => 600,
-			'display'  => __( 'Every 10 Minutes (EditLock)', 'editlock' ),
+			'display'  => __( 'Every 10 Minutes (Edit Conflict Guard)', 'etbs-edit-conflict-guard' ),
 		);
 		return $schedules;
 	}
@@ -140,10 +118,10 @@ if ( ! function_exists( 'edlk_get_editable_post_types' ) ) {
 
 if ( ! function_exists( 'edlk_is_post_type_enabled' ) ) {
 	/**
-	 * Checks whether EditLock is active for the given post type.
+	 * Checks whether Edit Conflict Guard is active for the given post type.
 	 *
 	 * @param string $post_type Post type slug.
-	 * @return bool True if the post type is locked by EditLock.
+	 * @return bool True if the post type is locked by Edit Conflict Guard.
 	 */
 	function edlk_is_post_type_enabled( $post_type ) {
 		if ( 'attachment' === $post_type ) {
@@ -208,7 +186,7 @@ if ( ! function_exists( 'edlk_enqueue_editor_script' ) ) {
 
 		wp_enqueue_script(
 			'edlk-editor',
-			plugins_url( 'js/editlock-editor.js', __FILE__ ),
+			plugins_url( 'js/edlk-editor.js', __FILE__ ),
 			array( 'jquery', 'heartbeat', 'wp-data', 'wp-api-fetch' ),
 			EDLK_VERSION,
 			true
@@ -223,11 +201,11 @@ if ( ! function_exists( 'edlk_enqueue_editor_script' ) ) {
 				'postId'     => (int) $post->ID,
 				'currentUid' => get_current_user_id(),
 				'i18n'       => array(
-					'lockedTitle'   => __( 'Another user is editing', 'editlock' ),
+					'lockedTitle'   => __( 'Another user is editing', 'etbs-edit-conflict-guard' ),
 					/* translators: %s: name of the user holding the lock (this string is used as a JS template). */
-					'lockedBody'    => __( '%s is currently editing this post, so you cannot save. Please wait until they are finished.', 'editlock' ),
-					'lockedUnknown' => __( 'Another user', 'editlock' ),
-					'closeButton'   => __( 'Close', 'editlock' ),
+					'lockedBody'    => __( '%s is currently editing this post, so you cannot save. Please wait until they are finished.', 'etbs-edit-conflict-guard' ),
+					'lockedUnknown' => __( 'Another user', 'etbs-edit-conflict-guard' ),
+					'closeButton'   => __( 'Close', 'etbs-edit-conflict-guard' ),
 				),
 			)
 		);
@@ -247,12 +225,12 @@ if ( ! function_exists( 'edlk_ajax_acquire' ) ) {
 
 		$post_id = isset( $_POST['post_id'] ) ? absint( wp_unslash( $_POST['post_id'] ) ) : 0;
 		if ( ! $post_id || ! current_user_can( 'edit_post', $post_id ) ) {
-			wp_send_json_error( array( 'message' => __( 'You do not have permission to do this.', 'editlock' ) ) );
+			wp_send_json_error( array( 'message' => __( 'You do not have permission to do this.', 'etbs-edit-conflict-guard' ) ) );
 		}
 
 		$session_id = isset( $_POST['session_id'] ) ? sanitize_text_field( wp_unslash( $_POST['session_id'] ) ) : '';
 		if ( '' === $session_id ) {
-			wp_send_json_error( array( 'message' => __( 'Invalid session ID.', 'editlock' ) ) );
+			wp_send_json_error( array( 'message' => __( 'Invalid session ID.', 'etbs-edit-conflict-guard' ) ) );
 		}
 
 		$status = Edlk_Lock_Manager::acquire( $post_id, $session_id, get_current_user_id(), edlk_get_ttl() );
@@ -383,11 +361,11 @@ if ( ! function_exists( 'edlk_pre_post_update_gate' ) ) {
 			esc_html(
 				sprintf(
 					/* translators: %s: ロックを保持しているユーザー名 */
-					__( '%s is currently editing this post, so it could not be saved. Please reload the page and try again.', 'editlock' ),
-					$user ? $user->display_name : __( 'Another user', 'editlock' )
+					__( '%s is currently editing this post, so it could not be saved. Please reload the page and try again.', 'etbs-edit-conflict-guard' ),
+					$user ? $user->display_name : __( 'Another user', 'etbs-edit-conflict-guard' )
 				)
 			),
-			esc_html__( 'Save Blocked', 'editlock' ),
+			esc_html__( 'Save Blocked', 'etbs-edit-conflict-guard' ),
 			array(
 				'response'  => 409,
 				'back_link' => true,
@@ -429,7 +407,7 @@ if ( ! function_exists( 'edlk_rest_pre_insert_gate' ) ) {
 			return $prepared_post; // 新規作成はロック対象外.
 		}
 
-		$session_id = sanitize_text_field( (string) $request->get_header( 'x_editlock_session' ) );
+		$session_id = sanitize_text_field( (string) $request->get_header( 'x_edlk_session' ) );
 		edlk_current_session_id( $session_id );
 
 		if ( '' !== $session_id && Edlk_Lock_Manager::is_holder( $post_id, $session_id ) ) {
@@ -446,8 +424,8 @@ if ( ! function_exists( 'edlk_rest_pre_insert_gate' ) ) {
 			'edlk_locked',
 			sprintf(
 				/* translators: %s: ロックを保持しているユーザー名 */
-				__( '%s is currently editing this post, so it could not be saved.', 'editlock' ),
-				$user ? $user->display_name : __( 'Another user', 'editlock' )
+				__( '%s is currently editing this post, so it could not be saved.', 'etbs-edit-conflict-guard' ),
+				$user ? $user->display_name : __( 'Another user', 'etbs-edit-conflict-guard' )
 			),
 			array( 'status' => 409 )
 		);
@@ -510,11 +488,11 @@ if ( ! function_exists( 'edlk_pre_trash_post_gate' ) ) {
 			esc_html(
 				sprintf(
 					/* translators: %s: ロックを保持しているユーザー名 */
-					__( '%s is currently editing this post, so it could not be moved to trash.', 'editlock' ),
-					$user ? $user->display_name : __( 'Another user', 'editlock' )
+					__( '%s is currently editing this post, so it could not be moved to trash.', 'etbs-edit-conflict-guard' ),
+					$user ? $user->display_name : __( 'Another user', 'etbs-edit-conflict-guard' )
 				)
 			),
-			esc_html__( 'Move to Trash Blocked', 'editlock' ),
+			esc_html__( 'Move to Trash Blocked', 'etbs-edit-conflict-guard' ),
 			array(
 				'response'  => 409,
 				'back_link' => true,
@@ -592,8 +570,8 @@ if ( ! function_exists( 'edlk_rest_pre_dispatch_trash_gate' ) ) {
 			'edlk_locked',
 			sprintf(
 				/* translators: %s: ロックを保持しているユーザー名 */
-				__( '%s is currently editing this post, so it could not be moved to trash.', 'editlock' ),
-				$user ? $user->display_name : __( 'Another user', 'editlock' )
+				__( '%s is currently editing this post, so it could not be moved to trash.', 'etbs-edit-conflict-guard' ),
+				$user ? $user->display_name : __( 'Another user', 'etbs-edit-conflict-guard' )
 			),
 			array( 'status' => 409 )
 		);
@@ -614,17 +592,17 @@ if ( ! function_exists( 'edlk_plugin_row_meta' ) ) {
 		if ( plugin_basename( EDLK_PLUGIN_FILE ) !== $file ) {
 			return $links;
 		}
-		$links[] = '<a href="https://etbs.jp/product-category/wordpress-tools/?utm_source=editlock&utm_medium=plugin" target="_blank" rel="noopener noreferrer">'
-			. esc_html__( 'Request development', 'editlock' ) . '</a>';
+		$links[] = '<a href="https://etbs.jp/product-category/wordpress-tools/?utm_source=etbs-edit-conflict-guard&utm_medium=plugin" target="_blank" rel="noopener noreferrer">'
+			. esc_html__( 'Request development', 'etbs-edit-conflict-guard' ) . '</a>';
 		return $links;
 	}
 	add_filter( 'plugin_row_meta', 'edlk_plugin_row_meta', 10, 2 );
 }
 
-// 寄付・開発依頼リンク（EditLock設定画面のフッター）.
+// 寄付・開発依頼リンク（Edit Conflict Guard 設定画面のフッター）.
 if ( ! function_exists( 'edlk_admin_footer_text' ) ) {
 	/**
-	 * Replaces the admin footer text on the EditLock settings screen with support links.
+	 * Replaces the admin footer text on the Edit Conflict Guard settings screen with support links.
 	 *
 	 * @param string $text Default admin footer text.
 	 * @return string Modified admin footer text.
@@ -635,18 +613,18 @@ if ( ! function_exists( 'edlk_admin_footer_text' ) ) {
 			return $text;
 		}
 
-		$donate_link  = '<a href="https://etbs.jp/product/donate/?utm_source=editlock&utm_medium=plugin" target="_blank" rel="noopener noreferrer">'
-			. esc_html__( 'consider supporting its development', 'editlock' ) . '</a>';
-		$request_link = '<a href="https://etbs.jp/product-category/wordpress-tools/?utm_source=editlock&utm_medium=plugin" target="_blank" rel="noopener noreferrer">'
-			. esc_html__( 'submit a request', 'editlock' ) . '</a>';
+		$donate_link  = '<a href="https://etbs.jp/product/donate/?utm_source=etbs-edit-conflict-guard&utm_medium=plugin" target="_blank" rel="noopener noreferrer">'
+			. esc_html__( 'consider supporting its development', 'etbs-edit-conflict-guard' ) . '</a>';
+		$request_link = '<a href="https://etbs.jp/product-category/wordpress-tools/?utm_source=etbs-edit-conflict-guard&utm_medium=plugin" target="_blank" rel="noopener noreferrer">'
+			. esc_html__( 'submit a request', 'etbs-edit-conflict-guard' ) . '</a>';
 
 		return sprintf(
 			/* translators: %s: 開発支援リンク */
-			__( 'If EditLock has been useful to you, please %s.', 'editlock' ),
+			__( 'If Edit Conflict Guard has been useful to you, please %s.', 'etbs-edit-conflict-guard' ),
 			$donate_link
 		) . ' ' . sprintf(
 			/* translators: %s: 開発依頼リンク */
-			__( 'For custom development, please %s.', 'editlock' ),
+			__( 'For custom development, please %s.', 'etbs-edit-conflict-guard' ),
 			$request_link
 		);
 	}
