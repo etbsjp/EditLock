@@ -12,7 +12,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 /**
  * Reads and writes rows in the {$wpdb->prefix}edlk_locks table.
  */
-class Edlk_Lock_Manager {
+class Etbs_Ecg_Lock_Manager {
 
 	/**
 	 * Gets the fully-prefixed name of the lock table.

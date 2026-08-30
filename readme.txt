@@ -90,6 +90,8 @@ Yes, deliberately. If the same user opens the same post in a second tab, the sec
 * Removed the dashboard widget.
 * Removed the donation link from the Plugins list row.
 * Moved the settings screen's inline script and styles into enqueued asset files.
+* Renamed the plugin's PHP classes and constants so this plugin can be installed alongside its predecessor without a fatal error. Option keys and the lock table are unchanged, so existing settings are kept.
+* The lock table and the cleanup task are now restored automatically if they go missing.
 
 = 1.0.3 =
 * Fix: uninstalling the plugin no longer deletes settings you configured (lock expiration, excluded post types). Only the plugin's own temporary lock data and its cleanup cron event are removed.

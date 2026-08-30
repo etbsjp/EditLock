@@ -12,7 +12,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 /**
  * Handles the Settings > Edit Conflict Guard admin screen: rendering, saving, and force-release AJAX.
  */
-class Edlk_Settings_Page {
+class Etbs_Ecg_Settings_Page {
 
 	/**
 	 * Hook suffix of the settings screen, used to enqueue assets only on that screen.
@@ -67,14 +67,14 @@ class Edlk_Settings_Page {
 			'edlk-settings',
 			plugins_url( 'css/edlk-settings.css', __FILE__ ),
 			array(),
-			EDLK_VERSION
+			ETBS_ECG_VERSION
 		);
 
 		wp_enqueue_script(
 			'edlk-settings',
 			plugins_url( 'js/edlk-settings.js', __FILE__ ),
 			array( 'jquery' ),
-			EDLK_VERSION,
+			ETBS_ECG_VERSION,
 			true
 		);
 
@@ -143,7 +143,7 @@ class Edlk_Settings_Page {
 			wp_send_json_error( __( 'Invalid post ID.', 'etbs-edit-conflict-guard' ) );
 		}
 
-		Edlk_Lock_Manager::force_release( $post_id );
+		Etbs_Ecg_Lock_Manager::force_release( $post_id );
 		wp_send_json_success();
 	}
 
@@ -161,7 +161,7 @@ class Edlk_Settings_Page {
 		$excluded     = edlk_get_excluded_post_types();
 		$post_types   = edlk_get_editable_post_types();
 		$guard_trash  = edlk_is_trash_guard_enabled();
-		$active_locks = Edlk_Lock_Manager::get_active_locks();
+		$active_locks = Etbs_Ecg_Lock_Manager::get_active_locks();
 		?>
 		<div class="wrap edlk-settings">
 			<h1><?php esc_html_e( 'Edit Conflict Guard Settings', 'etbs-edit-conflict-guard' ); ?></h1>
@@ -283,4 +283,4 @@ class Edlk_Settings_Page {
 	}
 }
 
-Edlk_Settings_Page::init();
+Etbs_Ecg_Settings_Page::init();

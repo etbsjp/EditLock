@@ -10,8 +10,8 @@ if ( ! defined( 'ABSPATH' ) ) {
 }
 
 // Load module files.
-require_once __DIR__ . '/class-edlk-lock-manager.php';
-require_once __DIR__ . '/class-edlk-settings-page.php';
+require_once __DIR__ . '/class-etbs-ecg-lock-manager.php';
+require_once __DIR__ . '/class-etbs-ecg-settings-page.php';
 
 /*
  * Translations are delivered by translate.wordpress.org and land in WP_LANG_DIR/plugins,
@@ -23,6 +23,39 @@ require_once __DIR__ . '/class-edlk-settings-page.php';
  * と Domain Path ヘッダはこのプラグインには不要。
  */
 
+/*
+ * Self-heal the lock table and the cleanup cron.
+ *
+ * Both are shared with the self-distributed predecessor (EditLock), whose uninstall.php drops the
+ * table and unschedules the cron. Deleting the predecessor after switching over would therefore
+ * take this plugin's storage with it, and the table is otherwise only created on activation —
+ * so it would never come back, and every gate would silently pass with "no lock". A missing cron
+ * is the cheap signal for that case (the cron array is autoloaded; no query is needed to check).
+ *
+ * ロックテーブルと後始末 cron は自社配布版の前身（EditLock）と共有しており、前身の
+ * uninstall.php はその両方を消す。移行後に前身を削除するとこのプラグインの保存先ごと消え、
+ * テーブルは有効化時にしか作られないため二度と戻らない。全ゲートが「ロック無し」で
+ * 通過するのにエラーは出ない。cron の欠落がその安価な検知手段になる（cron は autoload
+ * されるオプションなので、確認にクエリが要らない）。
+ */
+if ( ! function_exists( 'edlk_repair_storage' ) ) {
+	/**
+	 * Recreates the lock table and the cleanup cron if either has gone missing.
+	 *
+	 * @return void
+	 */
+	function edlk_repair_storage() {
+		if ( wp_next_scheduled( 'edlk_cleanup_cron' ) ) {
+			return;
+		}
+		// dbDelta() is idempotent, so running it when the table already exists is harmless.
+		// dbDelta() は冪等なので、テーブルが既にある状態で走らせても害はない.
+		Etbs_Ecg_Lock_Manager::create_table();
+		wp_schedule_event( time(), 'edlk_ten_minutes', 'edlk_cleanup_cron' );
+	}
+	add_action( 'admin_init', 'edlk_repair_storage' );
+}
+
 // 有効化・無効化.
 if ( ! function_exists( 'edlk_activate' ) ) {
 	/**
@@ -31,7 +64,7 @@ if ( ! function_exists( 'edlk_activate' ) ) {
 	 * @return void
 	 */
 	function edlk_activate() {
-		Edlk_Lock_Manager::create_table();
+		Etbs_Ecg_Lock_Manager::create_table();
 		if ( ! wp_next_scheduled( 'edlk_cleanup_cron' ) ) {
 			wp_schedule_event( time(), 'edlk_ten_minutes', 'edlk_cleanup_cron' );
 		}
@@ -73,7 +106,7 @@ if ( ! function_exists( 'edlk_cleanup_cron_handler' ) ) {
 	 * @return void
 	 */
 	function edlk_cleanup_cron_handler() {
-		Edlk_Lock_Manager::cleanup_expired();
+		Etbs_Ecg_Lock_Manager::cleanup_expired();
 	}
 	add_action( 'edlk_cleanup_cron', 'edlk_cleanup_cron_handler' );
 }
@@ -188,7 +221,7 @@ if ( ! function_exists( 'edlk_enqueue_editor_script' ) ) {
 			'edlk-editor',
 			plugins_url( 'js/edlk-editor.js', __FILE__ ),
 			array( 'jquery', 'heartbeat', 'wp-data', 'wp-api-fetch' ),
-			EDLK_VERSION,
+			ETBS_ECG_VERSION,
 			true
 		);
 
@@ -233,7 +266,7 @@ if ( ! function_exists( 'edlk_ajax_acquire' ) ) {
 			wp_send_json_error( array( 'message' => __( 'Invalid session ID.', 'etbs-edit-conflict-guard' ) ) );
 		}
 
-		$status = Edlk_Lock_Manager::acquire( $post_id, $session_id, get_current_user_id(), edlk_get_ttl() );
+		$status = Etbs_Ecg_Lock_Manager::acquire( $post_id, $session_id, get_current_user_id(), edlk_get_ttl() );
 		edlk_send_lock_status( $status, $session_id );
 	}
 	add_action( 'wp_ajax_edlk_acquire', 'edlk_ajax_acquire' );
@@ -252,7 +285,7 @@ if ( ! function_exists( 'edlk_ajax_release' ) ) {
 		$post_id    = isset( $_POST['post_id'] ) ? absint( wp_unslash( $_POST['post_id'] ) ) : 0;
 		$session_id = isset( $_POST['session_id'] ) ? sanitize_text_field( wp_unslash( $_POST['session_id'] ) ) : '';
 		if ( $post_id && '' !== $session_id && current_user_can( 'edit_post', $post_id ) ) {
-			Edlk_Lock_Manager::release( $post_id, $session_id );
+			Etbs_Ecg_Lock_Manager::release( $post_id, $session_id );
 		}
 		wp_send_json_success();
 	}
@@ -263,7 +296,7 @@ if ( ! function_exists( 'edlk_send_lock_status' ) ) {
 	/**
 	 * Sends the AJAX JSON response describing the current lock status.
 	 *
-	 * @param array|null $status     Lock status row from Edlk_Lock_Manager, or null if unlocked.
+	 * @param array|null $status     Lock status row from Etbs_Ecg_Lock_Manager, or null if unlocked.
 	 * @param string     $session_id Session ID of the requesting client.
 	 * @return void
 	 */
@@ -301,10 +334,10 @@ if ( ! function_exists( 'edlk_heartbeat_received' ) ) {
 		$session_id = sanitize_text_field( $data['edlk']['session_id'] ?? '' );
 
 		if ( $post_id && '' !== $session_id && current_user_can( 'edit_post', $post_id ) ) {
-			$renewed = Edlk_Lock_Manager::renew( $post_id, $session_id, edlk_get_ttl() );
+			$renewed = Etbs_Ecg_Lock_Manager::renew( $post_id, $session_id, edlk_get_ttl() );
 			if ( ! $renewed ) {
 				// 既に他セッションに奪われている場合は、その保持者情報を返す.
-				$status = Edlk_Lock_Manager::status( $post_id );
+				$status = Etbs_Ecg_Lock_Manager::status( $post_id );
 				if ( $status ) {
 					$user             = get_userdata( (int) $status['user_id'] );
 					$response['edlk'] = array(
@@ -347,11 +380,11 @@ if ( ! function_exists( 'edlk_pre_post_update_gate' ) ) {
 		$session_id = isset( $_POST['edlk_session_id'] ) ? sanitize_text_field( wp_unslash( $_POST['edlk_session_id'] ) ) : ''; // phpcs:ignore WordPress.Security.NonceVerification.Missing
 		edlk_current_session_id( $session_id );
 
-		if ( '' !== $session_id && Edlk_Lock_Manager::is_holder( $post_id, $session_id ) ) {
+		if ( '' !== $session_id && Etbs_Ecg_Lock_Manager::is_holder( $post_id, $session_id ) ) {
 			return;
 		}
 
-		$status = Edlk_Lock_Manager::status( $post_id );
+		$status = Etbs_Ecg_Lock_Manager::status( $post_id );
 		if ( ! $status ) {
 			return; // ロックが存在しない＝競合なし.
 		}
@@ -410,11 +443,11 @@ if ( ! function_exists( 'edlk_rest_pre_insert_gate' ) ) {
 		$session_id = sanitize_text_field( (string) $request->get_header( 'x_edlk_session' ) );
 		edlk_current_session_id( $session_id );
 
-		if ( '' !== $session_id && Edlk_Lock_Manager::is_holder( $post_id, $session_id ) ) {
+		if ( '' !== $session_id && Etbs_Ecg_Lock_Manager::is_holder( $post_id, $session_id ) ) {
 			return $prepared_post;
 		}
 
-		$status = Edlk_Lock_Manager::status( $post_id );
+		$status = Etbs_Ecg_Lock_Manager::status( $post_id );
 		if ( ! $status ) {
 			return $prepared_post;
 		}
@@ -443,7 +476,7 @@ if ( ! function_exists( 'edlk_release_after_save' ) ) {
 	function edlk_release_after_save( $post_id ) {
 		$session_id = edlk_current_session_id();
 		if ( '' !== $session_id ) {
-			Edlk_Lock_Manager::release( $post_id, $session_id );
+			Etbs_Ecg_Lock_Manager::release( $post_id, $session_id );
 		}
 	}
 	add_action( 'save_post', 'edlk_release_after_save' );
@@ -478,7 +511,7 @@ if ( ! function_exists( 'edlk_pre_trash_post_gate' ) ) {
 			return $check;
 		}
 
-		$status = Edlk_Lock_Manager::status( $post->ID );
+		$status = Etbs_Ecg_Lock_Manager::status( $post->ID );
 		if ( ! $status ) {
 			return $check;
 		}
@@ -560,7 +593,7 @@ if ( ! function_exists( 'edlk_rest_pre_dispatch_trash_gate' ) ) {
 			return $result;
 		}
 
-		$status = Edlk_Lock_Manager::status( $post_id );
+		$status = Etbs_Ecg_Lock_Manager::status( $post_id );
 		if ( ! $status ) {
 			return $result;
 		}
@@ -589,7 +622,7 @@ if ( ! function_exists( 'edlk_plugin_row_meta' ) ) {
 	 * @return string[] Modified row meta links.
 	 */
 	function edlk_plugin_row_meta( $links, $file ) {
-		if ( plugin_basename( EDLK_PLUGIN_FILE ) !== $file ) {
+		if ( plugin_basename( ETBS_ECG_PLUGIN_FILE ) !== $file ) {
 			return $links;
 		}
 		$links[] = '<a href="https://etbs.jp/product-category/wordpress-tools/?utm_source=etbs-edit-conflict-guard&utm_medium=plugin" target="_blank" rel="noopener noreferrer">'
