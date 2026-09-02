@@ -246,3 +246,87 @@ msgstr "EditLockが役に立ったら、%sしてください。"
 #: inc/func.php:431
 msgid "For custom development, please %s."
 msgstr "カスタマイズをご希望の場合は、%sしてください。"
+
+#: inc/class-migration-notice.php
+msgid "EditLock is now on WordPress.org as \"ETBS Edit Conflict Guard\"."
+msgstr "EditLock は WordPress.org 公式ディレクトリで「ETBS Edit Conflict Guard」として公開されました。"
+
+#: inc/class-migration-notice.php
+msgid "It is the same plugin by the same author, renamed so it could be listed in the official plugin directory."
+msgstr "同じ作者による同じプラグインで、公式ディレクトリに掲載するために名称を変更したものです。"
+
+#: inc/class-migration-notice.php
+msgid "New versions are published on WordPress.org from now on."
+msgstr "今後の新しいバージョンは WordPress.org で公開されます。"
+
+#: inc/class-migration-notice.php
+msgid "How to switch over - your settings are kept:"
+msgstr "切り替えの手順 — 設定はそのまま引き継がれます:"
+
+#: inc/class-migration-notice.php
+msgid "Install and activate %s from the plugin directory."
+msgstr "プラグインディレクトリから %s をインストールして有効化します。"
+
+#: inc/class-migration-notice.php
+msgid "Deactivate EditLock."
+msgstr "EditLock を停止します。"
+
+#: inc/class-migration-notice.php
+msgid "The new plugin starts working the moment EditLock is deactivated."
+msgstr "停止した時点で新しいプラグインが動き始めます。"
+
+#: inc/class-migration-notice.php
+msgid "Delete EditLock."
+msgstr "EditLock を削除します。"
+
+#: inc/class-migration-notice.php
+msgid "Your lock expiration, excluded post types and trash protection settings are carried over automatically."
+msgstr "ロックの有効期限・除外する投稿タイプ・ゴミ箱の保護の設定は、自動的に引き継がれます。"
+
+#: inc/class-migration-notice.php
+msgid "Please switch while nobody is editing a post: locks held at that moment are released during the switch."
+msgstr "誰も投稿を編集していない時間に切り替えてください。切り替えの間、そのとき保持されているロックは解除されます。"
+
+#: inc/class-migration-notice.php
+msgid "Do not show this again"
+msgstr "この案内を今後表示しない"
+
+#: inc/class-migration-notice.php
+msgid "ETBS Edit Conflict Guard is installed but not running, because EditLock is still active."
+msgstr "ETBS Edit Conflict Guard は設置済みですが、EditLock が有効なため動作していません。"
+
+#: inc/class-migration-notice.php
+msgid "Deactivate EditLock to finish the switch."
+msgstr "EditLock を停止すると切り替えが完了します。"
+
+#: inc/class-migration-notice.php
+msgid "Your saved settings are kept."
+msgstr "設定はそのまま引き継がれます。"
+
+#: inc/class-migration-notice.php
+msgid "Delete EditLock after the new plugin is running, because deleting it removes the shared lock table."
+msgstr "EditLock を削除すると共有しているロックテーブルが消えるため、削除は新しいプラグインが動き始めてから行ってください。"
+
+#: inc/class-migration-notice.php
+msgid "Moving to WordPress.org"
+msgstr "WordPress.org への移行"
+
+#: inc/class-migration-notice.php
+msgid "ETBS Edit Conflict Guard is installed but has not been activated yet."
+msgstr "ETBS Edit Conflict Guard は設置済みですが、まだ有効化されていません。"
+
+#: inc/class-migration-notice.php
+msgid "Activate ETBS Edit Conflict Guard first."
+msgstr "先に ETBS Edit Conflict Guard を有効化してください。"
+
+#: inc/class-migration-notice.php
+msgid "Do not deactivate EditLock until then, or this site is left with no protection against save conflicts."
+msgstr "それまで EditLock を停止しないでください。停止すると、このサイトは保存競合に対する保護が無い状態になります。"
+
+#: inc/class-migration-notice.php
+msgid "Plugins screen"
+msgstr "プラグイン一覧"
+
+#: inc/class-migration-notice.php
+msgid "It can be activated on the %s."
+msgstr "%s から有効化できます。"
