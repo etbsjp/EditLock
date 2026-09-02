@@ -2,7 +2,7 @@
 /**
  * Plugin Name:       EditLock
  * Description:       A per-post exclusive lock plugin that actually blocks saving while another user is editing the post.
- * Version:           1.0.3
+ * Version:           1.0.4
  * Requires PHP:      7.4
  * Author:            ETBS (DAI)
  * Author URI:        https://etbs.jp
@@ -15,7 +15,7 @@
  * @package editlock
  */
 
-define( 'EDLK_VERSION', '1.0.3' );
+define( 'EDLK_VERSION', '1.0.4' );
 define( 'EDLK_PLUGIN_FILE', __FILE__ );
 
 if ( ! defined( 'ABSPATH' ) ) {
