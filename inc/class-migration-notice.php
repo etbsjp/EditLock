@@ -253,6 +253,12 @@ class Edlk_Migration_Notice {
 		}
 
 		add_thickbox();
+
+		// Core's plugins.php loads this alongside add_thickbox(); without it the modal opens but
+		// loses core's resize and focus handling.
+		// コアの plugins.php は add_thickbox() と一緒にこれも読み込む。無いとモーダルは開くが、
+		// コア相当のリサイズとフォーカス制御が付かない.
+		wp_enqueue_script( 'plugin-install' );
 	}
 
 	/**
@@ -383,6 +389,17 @@ class Edlk_Migration_Notice {
 			<p>
 				<?php esc_html_e( 'Activate ETBS Edit Conflict Guard first.', 'editlock' ); ?>
 				<?php esc_html_e( 'Do not deactivate EditLock until then, or this site is left with no protection against save conflicts.', 'editlock' ); ?>
+			</p>
+			<p>
+				<?php
+				$plugins_link = '<a href="' . esc_url( admin_url( 'plugins.php' ) ) . '">'
+					. esc_html__( 'Plugins screen', 'editlock' ) . '</a>';
+				printf(
+					/* translators: %s: link to the Plugins screen / プラグイン一覧へのリンク */
+					esc_html__( 'It can be activated on the %s.', 'editlock' ),
+					$plugins_link // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- Built above from esc_url() and esc_html__().
+				);
+				?>
 			</p>
 		</div>
 		<?php

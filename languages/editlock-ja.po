@@ -322,3 +322,11 @@ msgstr "先に ETBS Edit Conflict Guard を有効化してください。"
 #: inc/class-migration-notice.php
 msgid "Do not deactivate EditLock until then, or this site is left with no protection against save conflicts."
 msgstr "それまで EditLock を停止しないでください。停止すると、このサイトは保存競合に対する保護が無い状態になります。"
+
+#: inc/class-migration-notice.php
+msgid "Plugins screen"
+msgstr "プラグイン一覧"
+
+#: inc/class-migration-notice.php
+msgid "It can be activated on the %s."
+msgstr "%s から有効化できます。"
