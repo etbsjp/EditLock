@@ -304,8 +304,8 @@ msgid "Your saved settings are kept."
 msgstr "設定はそのまま引き継がれます。"
 
 #: inc/class-migration-notice.php
-msgid "Delete EditLock after the new plugin is running."
-msgstr "EditLock の削除は、新しいプラグインが動き始めてから行ってください。"
+msgid "Delete EditLock after the new plugin is running, because deleting it removes the shared lock table."
+msgstr "EditLock を削除すると共有しているロックテーブルが消えるため、削除は新しいプラグインが動き始めてから行ってください。"
 
 #: inc/class-migration-notice.php
 msgid "Moving to WordPress.org"

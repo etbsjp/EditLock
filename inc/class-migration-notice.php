@@ -66,6 +66,11 @@ class Edlk_Migration_Notice {
 	 */
 	public static function init() {
 		add_action( 'admin_notices', array( __CLASS__, 'render' ) );
+		// Core does not fire admin_notices on network admin screens, and the network plugins
+		// list is the only place a super admin sees this plugin's row.
+		// コアはネットワーク管理画面で admin_notices を発火しない。ネットワークのプラグイン一覧は
+		// スーパー管理者がこのプラグインの行を見る唯一の画面なので、専用のフックにも登録する.
+		add_action( 'network_admin_notices', array( __CLASS__, 'render' ) );
 		add_action( 'admin_post_' . self::DISMISS_ACTION, array( __CLASS__, 'handle_dismiss' ) );
 		// Priority 11 so this link comes after the existing "Request development" link.
 		// 既存の「開発のご依頼」リンクの後ろに並べるため優先度 11 で登録する.
@@ -76,16 +81,40 @@ class Edlk_Migration_Notice {
 	 * Reports whether the wordpress.org release is present on this site.
 	 * wordpress.org 版がこのサイトに設置済みかどうかを返す。
 	 *
-	 * File existence is checked instead of asking whether the plugin is active, because the
-	 * successor refuses to load while this plugin is active. Asking "is it active" would answer
+	 * The installed-plugin list is scanned instead of asking whether the plugin is active, because
+	 * the successor refuses to load while this plugin is active. Asking "is it active" would answer
 	 * "no" for exactly the site that needs the follow-up message.
-	 * 有効かどうかではなくファイルの有無を見ている。後継はこのプラグインが有効な間は読み込みを
-	 * 拒否するため、「有効か」で判定すると、続きの案内が最も必要なサイトで「いいえ」になる。
+	 * 有効かどうかではなく設置済みプラグインの一覧を見ている。後継はこのプラグインが有効な間は
+	 * 読み込みを拒否するため、「有効か」で判定すると、続きの案内が最も必要なサイトで「いいえ」になる。
 	 *
-	 * @return bool True when the successor's main file exists.
+	 * @return bool True when a plugin whose main file is etbs-edit-conflict-guard.php is installed.
 	 */
 	public static function is_successor_installed() {
-		return file_exists( WP_PLUGIN_DIR . '/' . self::SUCCESSOR_FILE );
+		static $installed = null;
+
+		if ( null !== $installed ) {
+			return $installed;
+		}
+
+		if ( ! function_exists( 'get_plugins' ) ) {
+			require_once ABSPATH . 'wp-admin/includes/plugin.php';
+		}
+
+		// Match a renamed folder too, the way the successor matches ours. Uploading the GitHub
+		// zip by hand produces "etbs-edit-conflict-guard-main", and an exact match would miss it.
+		// 後継が本プラグインを拾うのと同じく、フォルダ名を変えて設置された場合も拾う。GitHub の zip を
+		// 手でアップロードすると etbs-edit-conflict-guard-main になり、完全一致では取りこぼす.
+		$needle    = '/' . basename( self::SUCCESSOR_FILE );
+		$installed = false;
+
+		foreach ( array_keys( get_plugins() ) as $plugin ) {
+			if ( substr( $plugin, -strlen( $needle ) ) === $needle ) {
+				$installed = true;
+				break;
+			}
+		}
+
+		return $installed;
 	}
 
 	/**
@@ -112,6 +141,23 @@ class Edlk_Migration_Notice {
 		$allowed = array( 'plugins', 'plugins-network', 'settings_page_edlk-settings' );
 
 		return in_array( $screen->id, $allowed, true );
+	}
+
+	/**
+	 * Reports whether the current user should be shown the notice.
+	 * 現在のユーザーに案内を見せるべきかを返す。
+	 *
+	 * On multisite, activate_plugins can require manage_network_plugins, so a site administrator
+	 * who can open this plugin's settings screen would otherwise never see the notice.
+	 * The dismiss handler uses the same test, so nobody can see it without being able to hide it.
+	 * マルチサイトでは activate_plugins が manage_network_plugins を要求することがあり、
+	 * 本プラグインの設定画面を開けるサイト管理者に案内が届かなくなる。
+	 * 「今後表示しない」の処理も同じ判定を使う（見えるのに消せない状態を作らないため）。
+	 *
+	 * @return bool True when the notice should be available to this user.
+	 */
+	private static function current_user_may_see() {
+		return current_user_can( 'activate_plugins' ) || current_user_can( 'manage_options' );
 	}
 
 	/**
@@ -150,10 +196,18 @@ class Edlk_Migration_Notice {
 	 * @return string Nonce-protected URL pointing at admin-post.php.
 	 */
 	private static function get_dismiss_url() {
-		return wp_nonce_url(
-			admin_url( 'admin-post.php?action=' . self::DISMISS_ACTION ),
-			self::DISMISS_ACTION
-		);
+		$url = admin_url( 'admin-post.php?action=' . self::DISMISS_ACTION );
+
+		// Carry the current screen explicitly. Relying on HTTP_REFERER alone sends anyone whose
+		// browser suppresses it back to the plugins list instead of the screen they were on.
+		// 現在の画面を明示的に持たせる。HTTP_REFERER だけに頼ると、それを送らないブラウザでは
+		// 元の画面ではなくプラグイン一覧に戻されてしまう.
+		if ( isset( $_SERVER['REQUEST_URI'] ) ) {
+			$current = esc_url_raw( wp_unslash( $_SERVER['REQUEST_URI'] ) );
+			$url     = add_query_arg( '_wp_http_referer', rawurlencode( $current ), $url );
+		}
+
+		return wp_nonce_url( $url, self::DISMISS_ACTION );
 	}
 
 	/**
@@ -163,7 +217,7 @@ class Edlk_Migration_Notice {
 	 * @return void
 	 */
 	public static function render() {
-		if ( ! current_user_can( 'activate_plugins' ) ) {
+		if ( ! self::current_user_may_see() ) {
 			return;
 		}
 
@@ -213,7 +267,7 @@ class Edlk_Migration_Notice {
 				<li>
 					<?php
 					printf(
-						/* translators: %s: wordpress.org 版へのリンク */
+						/* translators: %s: link to the wordpress.org release / wordpress.org 版へのリンク */
 						esc_html__( 'Install and activate %s from the plugin directory.', 'editlock' ),
 						$successor_link // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- Built above from esc_url() and esc_html__().
 					);
@@ -258,7 +312,7 @@ class Edlk_Migration_Notice {
 			<p>
 				<?php esc_html_e( 'Deactivate EditLock to finish the switch.', 'editlock' ); ?>
 				<?php esc_html_e( 'Your saved settings are kept.', 'editlock' ); ?>
-				<?php esc_html_e( 'Delete EditLock after the new plugin is running.', 'editlock' ); ?>
+				<?php esc_html_e( 'Delete EditLock after the new plugin is running, because deleting it removes the shared lock table.', 'editlock' ); ?>
 			</p>
 		</div>
 		<?php
@@ -271,7 +325,7 @@ class Edlk_Migration_Notice {
 	 * @return void
 	 */
 	public static function handle_dismiss() {
-		if ( ! current_user_can( 'activate_plugins' ) ) {
+		if ( ! self::current_user_may_see() ) {
 			wp_die( esc_html__( 'You do not have permission to do this.', 'editlock' ) );
 		}
 
