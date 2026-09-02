@@ -310,3 +310,15 @@ msgstr "EditLock を削除すると共有しているロックテーブルが消
 #: inc/class-migration-notice.php
 msgid "Moving to WordPress.org"
 msgstr "WordPress.org への移行"
+
+#: inc/class-migration-notice.php
+msgid "ETBS Edit Conflict Guard is installed but has not been activated yet."
+msgstr "ETBS Edit Conflict Guard は設置済みですが、まだ有効化されていません。"
+
+#: inc/class-migration-notice.php
+msgid "Activate ETBS Edit Conflict Guard first."
+msgstr "先に ETBS Edit Conflict Guard を有効化してください。"
+
+#: inc/class-migration-notice.php
+msgid "Do not deactivate EditLock until then, or this site is left with no protection against save conflicts."
+msgstr "それまで EditLock を停止しないでください。停止すると、このサイトは保存競合に対する保護が無い状態になります。"

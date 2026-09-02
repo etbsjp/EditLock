@@ -4,7 +4,7 @@
  * Description:       A per-post exclusive lock plugin that actually blocks saving while another user is editing the post.
  * Version:           1.0.3
  * Requires PHP:      7.4
- * Author:            DAI
+ * Author:            ETBS (DAI)
  * Author URI:        https://etbs.jp
  * Plugin URI:        https://etbs.jp/product/editlock/
  * License:           GPL-2.0-or-later

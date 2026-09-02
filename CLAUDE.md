@@ -88,67 +88,86 @@ ln -sfn ~/Downloads/GitHub/editlock "$P"                                # 検証
 ## 版数
 
 ★★★ **実装の PR で版数を上げてはいけない。** 実装コミットだけを積むこと。
+版数上げ・`dist` push は **engine を止めてから人が行う**（`~/.claude/etbs-plugin-rules.md`）。
 
-- `dist` は配信先そのもの。版数を上げてマージした瞬間に、既存の自社配布ユーザー（2026-08-25 実測で
-  約19サイト）へ配られる
-- とくに公式ディレクトリ移行中は危険で、**PUC を撤去済みの版が配られた時点で、以後こちらから更新も案内も
-  一切届かなくなる**（移行の案内を出す手段が消える）
-- 版数上げ・`dist` push は **engine を止めてから人が行う**（`~/.claude/etbs-plugin-rules.md`）
-- 公式化の直列では **1.1.0 への引き上げは #4 でまとめて行う**。#1〜#3 では触らない
+- `dist` は配信先そのもの。版数を上げてマージした瞬間に、既存の自社配布ユーザー
+  （2026-08-25 実測で **約19サイト。いずれも etbs.jp のショップから落とした第三者**で、
+  こちらは管理画面に入れない）へ配られる
 
-★★★ **PUC はもう `dist` から撤去済み**（#1 / `d7fdc09`。`git ls-tree -r dist | grep update-checker` は 0 件）。
-これは「これから気をつける話」ではない。**罠は装填済みで、安全弁は「版数が 1.0.3 のままである」の一点だけ**。
-既存サイトの PUC が `dist` を見に行っても、宣言が 1.0.3 で手元も 1.0.3 だから更新が提示されない、それだけで止まっている。
+## ★★★ 現在地（2026-09-02 更新。ここより古い記述を信じないこと）
 
-→ **次に版数を上げて `dist` へ push した瞬間に、PUC 無しの版が既存 約19サイトへ確定的に配られ、以後こちらからは
-何も届かなくなる。不可逆。** #4 は 1.1.0 への引き上げが本題なので、ここに正面から当たる。
-**1.1.0 を `dist` へ push する前に「移行案内をどう届けるか」を決めること。上げてからでは手段が無い。**
+**wordpress.org での公開は完了した。**
 
-★★★ **1.1.0 は wordpress.org で公開されるまで `dist` にマージしない**（2026-08-25 決定）。
+| | |
+|---|---|
+| 公開物 | `ETBS Edit Conflict Guard` / スラッグ `etbs-edit-conflict-guard` / 1.1.0 / SVN r3676958 |
+| 公開 URL | https://wordpress.org/plugins/etbs-edit-conflict-guard/ |
+| `dist`（この系列） | **EditLock 1.0.x のまま維持する。1.1.0 にはしない** |
 
-#4 の完了条件は「申請できる zip を作る」であって、`dist` へのマージではない。**1.1.0 のコミットと zip は作るが、
-PR は開けたまま #36 の申請が通るのを待つ。** タスクが `status:waiting-merge` で長く止まるのは想定どおりで、
-停滞ではない。
+★★★ **新旧はコアの更新機能では永久に繋がらない。**
+コアはインストール済みプラグインを**フォルダ名（スラッグ）**で照会するが、既存サイトのフォルダは
+`editlock`、wp.org 版は `etbs-edit-conflict-guard`。**別物として扱われる。**
+19サイトは**手で移行するしかない**。
 
-理由は「更新経路が消えるから」ではない。**経路は wp.org へ移る。** コアの更新チェックは
-インストール済みプラグインを**フォルダ名（スラッグ）**で api.wordpress.org に照会し、PUC は
-`upgrader_source_selection` の `fixDirectoryName` で展開先を `editlock` に揃えている（`UpdateChecker.php:168`）。
-だから wp.org に `editlock` が公開された時点で、コアが自動的に更新を配り始める。
+★★★ **`pr-10`（1.1.0）を `dist` にマージしてはいけない。破棄する。**
+`pr-10` は PUC を1行も含まず版数が 1.1.0 なので、**マージ・push した瞬間に19サイトの PUC が取得し、
+移行案内の無い版に置き換わる。以後こちらから何も届かない。不可逆。**
 
-順序を守る理由は次の2つ。
+★ **これ以前のこのファイルには「公開後に 1.1.0 を `dist` へマージするのが引き渡しリリースとして必要。
+マージしないままだと誰も移らない」と書かれていた。これは誤りだったので削除した。**
+その記述は「wp.org に `editlock` というスラッグで公開される」という前提で書かれていたが、
+審査で `edit-lock` との類似を理由に改名させられ、前提が消えた。
 
-- **空白期間** … 1.1.0 を配ってから wp.org が公開されるまで、既存 約19サイトは**どこからも更新を受け取れない**
-- ★★★ **スラッグの乗っ取り** … 先に PUC を外した状態で**他人が `editlock` を wp.org で取得**すると、
-  コアは**その他人のプラグインを「更新」として既存サイトへ配る**。供給経路の乗っ取りが成立する。
-  `editlock` は 2026-08-25 時点で空いている（plugins API が `Plugin not found.`）が、押さえたのは申請が通ってから
+## ★★★ PUC は `dist` に復元済み（task-queue #195）
 
-★ 公開後に 1.1.0 を `dist` へマージするのは「引き渡しリリース」として必要。これを配って初めて
-既存サイトの PUC が外れ、以後コアが wp.org から配るようになる。**マージしないままだと誰も移らない。**
+`d7fdc09` で撤去したものを **`d7fdc09^` からバイト単位で復元した**（`inc/plugin-update-checker/`・
+`editlock.php` のブートストラップ）。理由は2つ。
 
-★ あわせて、公開と同時に `https://etbs.jp/product/editlock/` の配布物（¥0 の Downloads 節）を
-wp.org へ向け直すこと。放置すると新規の利用者が自社配布版を掴み続ける。
+1. **19サイトへ移行案内を届ける経路がこれしか無い。**
+   PUC を残せば、文面を誤っても次の版で訂正できる。**終端リリースにすると一発勝負になる**
+2. ★★★ **PUC の `excludeEntityFromWordPressAPI`（`UpdateChecker.php` `installHooks()` で条件分岐なしに登録）が、
+   コアが `api.wordpress.org/plugins/update-check/1.x/` へ送る payload から `editlock/editlock.php` の行を
+   削除している。**つまり **PUC が生きている限り、19サイトの `editlock` は wp.org から見えていない。**
+   旧スラッグ `editlock` を第三者が取得しても、その更新は提示されない
 
-★ 2026-08-25 に #1 の PR で 1.0.3 → 1.0.4 に上げられ、マージ前に revert した実績がある。
-下の「版数の置き場は3箇所」は**人がリリース時に上げるときの手順**であって、実装 PR の話ではない。
+→ **PUC を外した版を配ることが、乗っ取りの窓を自分で開ける行為になる。**（かつてこのファイルには
+逆のことが書かれていた。撤去済みであることが危険なのであって、同梱が危険なのではない）
 
-★★★ **版数の置き場は3箇所。**（#3 で `readme.txt` を追加したため 2 → 3 に増えた）
+## リリース手順（人が行う）
 
-- `editlock.php` の `Version:` ヘッダ
-- `editlock.php` の `define( 'EDLK_VERSION', ... )`（`inc/func.php` で `wp_enqueue_script()` の
-  キャッシュバスターとして使用中）
-- **`readme.txt` の `Stable tag:`**
+★★★ **版数の置き場は4箇所。**
 
-**現在は3箇所とも一致している**（1.0.3）。上げる際は3つとも揃えること。
+1. `editlock.php` の `Version:` ヘッダ
+2. `editlock.php` の `define( 'EDLK_VERSION', ... )`（`inc/func.php` で `wp_enqueue_script()` の
+   キャッシュバスターとして使用中）
+3. `readme.txt` の `Stable tag:`
+4. ★ **`readme.txt` の `== Changelog ==` と `== Upgrade Notice ==` に、その版のエントリを書く**
+
+★★★ **4 を落とすと、配ったのに誰も読まない。**
+PUC は `setInfoFromRemoteReadme()`（`Vcs/PluginUpdateChecker.php:195-197`）で `readme.txt` の
+`== Upgrade Notice ==` からその版のエントリを拾い、コアがプラグイン一覧の行直下に太字で表示する。
+**ここが空だと、更新を当てない管理者は更新の目的を知る機会がゼロになる。**
+`== Description ==` も PUC 経由で「詳細を表示」モーダルに流れるので、内容が古いままにしない。
+
+**現在は 1〜3 が 1.0.3 で一致し、4 には 1.0.4 のエントリが先に用意されている**
+（文面だけ先に置き、版数を上げるのはリリース時）。
 
 ```sh
 grep -nE "^ \* Version:|define\( 'EDLK_VERSION'" editlock.php
 grep -n  "^Stable tag:" readme.txt
+grep -n  "^= 1\." readme.txt
 ```
 
 ★★ **`Stable tag` を揃え忘れると2通りに壊れる。** Plugin Check が `stable_tag_mismatch` を出して
 止まるか、気付かず wp.org の SVN へ上げた場合は **`Stable tag` が指すタグが配信版になる**ため、
 新版を上げたのに利用者には古い版が配られ続ける。ordermemo で踏んだ `ORMM_VERSION` のヘッダとの
-ずれと同じ構図なので、リリース時は必ず上の2本の grep を両方通すこと。
+ずれと同じ構図なので、リリース時は必ず上の grep を通すこと。
+
+★ 2026-08-25 に #1 の PR で 1.0.3 → 1.0.4 に上げられ、マージ前に revert した実績がある。
+この手順は**人がリリース時に上げるときのもの**であって、実装 PR の話ではない。
+
+★ `https://etbs.jp/product/editlock/` の配布物を wp.org へ向け直す作業は **2026-09-02 に完了済み**
+（商品ページの遷移先を wp.org に変更）。
 
 ## PR の作法
 
@@ -171,6 +190,15 @@ grep -n  "^Stable tag:" readme.txt
 `dist` ブランチへのマージ＝配信。PUC が配る zip には**追跡しているファイルが全部入る**ため、
 `.gitignore`（追跡させない）と `.gitattributes` の `export-ignore`（zip から落とす）は役割が別。
 両方を維持すること。
+
+★★★ **`.gitattributes` のパターンは必ず先頭 `/` でアンカーすること。**
+未アンカーだと**あらゆる階層の同名に当たる。** PUC を `dist` に戻した（#195）ため、
+`composer.json` や `vendor/` を無印で足すと `inc/plugin-update-checker/composer.json` と
+`inc/plugin-update-checker/vendor/` に当たり、`Puc/v5p5/Autoloader.php` の静的マップが参照する
+`PucReadmeParser` / `Parsedown` が配布物から消える。`readme.txt` を持つこのプラグインでは
+**更新チェックのたびに Class not found の Fatal**（widget-shortcode-tools で実際に踏んだ形）。
+2026-09-02 に既存4行をアンカー済み。落ちるのは `.gitignore` / `.gitattributes` / `CLAUDE.md` の
+3ファイルだけであることを実測で確認している。
 
 ### ★★★ 提出用 zip は `git archive` で作る
 

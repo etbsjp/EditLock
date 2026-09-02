@@ -75,6 +75,7 @@ class Edlk_Migration_Notice {
 		// Priority 11 so this link comes after the existing "Request development" link.
 		// 既存の「開発のご依頼」リンクの後ろに並べるため優先度 11 で登録する.
 		add_filter( 'plugin_row_meta', array( __CLASS__, 'add_row_meta' ), 11, 2 );
+		add_action( 'admin_enqueue_scripts', array( __CLASS__, 'enqueue_thickbox' ) );
 	}
 
 	/**
@@ -144,6 +145,41 @@ class Edlk_Migration_Notice {
 	}
 
 	/**
+	 * Reports whether the wordpress.org release is active on this site.
+	 * wordpress.org 版がこのサイトで有効かどうかを返す。
+	 *
+	 * Installed and active are not the same thing, and the difference decides which message is
+	 * true. The "Add Plugins" screen installs and activates in two separate clicks, so leaving
+	 * after the first one is ordinary behaviour.
+	 * 「設置済み」と「有効」は別物で、その違いがどの文面が真かを決める。「プラグインを追加」画面は
+	 * インストールと有効化が別々の2クリックなので、1つ目で離脱するのは普通に起きる。
+	 *
+	 * Written to mirror the successor's Etbs_Ecg_Legacy_Guard::is_legacy_active().
+	 * 後継の Etbs_Ecg_Legacy_Guard::is_legacy_active() と対称になるように書いている。
+	 *
+	 * @return bool True when a plugin whose main file is etbs-edit-conflict-guard.php is active.
+	 */
+	private static function is_successor_active() {
+		$active = (array) get_option( 'active_plugins', array() );
+
+		if ( is_multisite() ) {
+			// Network-activated plugins are stored as keys, not values.
+			// ネットワーク有効化されたプラグインは値ではなくキーとして保存される.
+			$active = array_merge( $active, array_keys( (array) get_site_option( 'active_sitewide_plugins', array() ) ) );
+		}
+
+		$needle = '/' . basename( self::SUCCESSOR_FILE );
+
+		foreach ( $active as $plugin ) {
+			if ( substr( (string) $plugin, -strlen( $needle ) ) === $needle ) {
+				return true;
+			}
+		}
+
+		return false;
+	}
+
+	/**
 	 * Reports whether the current user should be shown the notice.
 	 * 現在のユーザーに案内を見せるべきかを返す。
 	 *
@@ -183,10 +219,40 @@ class Edlk_Migration_Notice {
 	 */
 	private static function get_install_url() {
 		if ( current_user_can( 'install_plugins' ) ) {
-			return admin_url( 'plugin-install.php?tab=plugin-information&plugin=' . self::SUCCESSOR_SLUG );
+			// Core defines IFRAME_REQUEST for this tab (wp-admin/plugin-install.php), so opening it
+			// as a plain link produces a page with no admin menu. TB_iframe makes it the modal that
+			// core itself uses, and the link still works if the modal script does not load.
+			// コアはこのタブで IFRAME_REQUEST を定義するため、素のリンクで開くと管理メニューの無い
+			// ページになる。TB_iframe を付けるとコア自身が使うモーダルになり、
+			// スクリプトが読めなくてもリンクとしては機能する.
+			return admin_url(
+				'plugin-install.php?tab=plugin-information&plugin=' . self::SUCCESSOR_SLUG
+				. '&TB_iframe=true&width=772&height=622'
+			);
 		}
 
 		return self::SUCCESSOR_URL;
+	}
+
+	/**
+	 * Loads the modal script on the screens that show the notice.
+	 * 案内を出す画面でモーダルのスクリプトを読み込む。
+	 *
+	 * The plugins list loads it already; this only covers this plugin's settings screen.
+	 * プラグイン一覧では既に読み込まれているので、実質は本プラグインの設定画面のためのもの。
+	 *
+	 * @return void
+	 */
+	public static function enqueue_thickbox() {
+		if ( ! self::current_user_may_see() ) {
+			return;
+		}
+
+		if ( ! self::is_target_screen() ) {
+			return;
+		}
+
+		add_thickbox();
 	}
 
 	/**
@@ -226,10 +292,14 @@ class Edlk_Migration_Notice {
 		}
 
 		if ( self::is_successor_installed() ) {
-			// The user has already started the switch. This is the last step, so it is shown
-			// even to users who hid the first notice.
-			// すでに切り替えを始めている。最後の1手なので、最初の案内を消したユーザーにも出す.
-			self::render_last_step();
+			// The user has already started the switch. These are the last steps, so they are
+			// shown even to users who hid the first notice.
+			// すでに切り替えを始めている。最後の数手なので、最初の案内を消したユーザーにも出す.
+			if ( self::is_successor_active() ) {
+				self::render_last_step();
+			} else {
+				self::render_activate_first();
+			}
 			return;
 		}
 
@@ -249,7 +319,8 @@ class Edlk_Migration_Notice {
 	private static function render_announcement() {
 		// The product name is a brand name and is not translated.
 		// 製品名はブランド名なので翻訳対象にしない.
-		$successor_link = '<a href="' . esc_url( self::get_install_url() ) . '"><strong>'
+		$link_class     = current_user_can( 'install_plugins' ) ? ' class="thickbox open-plugin-details-modal"' : '';
+		$successor_link = '<a href="' . esc_url( self::get_install_url() ) . '"' . $link_class . '><strong>'
 			. esc_html( 'ETBS Edit Conflict Guard' ) . '</strong></a>';
 		?>
 		<div class="notice notice-info">
@@ -287,6 +358,31 @@ class Edlk_Migration_Notice {
 				<a href="<?php echo esc_url( self::get_dismiss_url() ); ?>">
 					<?php esc_html_e( 'Do not show this again', 'editlock' ); ?>
 				</a>
+			</p>
+		</div>
+		<?php
+	}
+
+	/**
+	 * Prints the notice shown when the successor is installed but has not been activated.
+	 * 後継が設置済みなのに有効化されていないサイトに出す案内を出力する。
+	 *
+	 * Telling this site to deactivate EditLock would leave it with no protection at all, and
+	 * nothing would say so: EditLock would be stopped and the successor would not be running.
+	 * この状態のサイトに「EditLock を停止してください」と言うと、保護がどこからも無くなる。
+	 * しかも EditLock は停止済み、後継は未有効なので、それを知らせるものが何も無い。
+	 *
+	 * @return void
+	 */
+	private static function render_activate_first() {
+		?>
+		<div class="notice notice-warning">
+			<p>
+				<strong><?php esc_html_e( 'ETBS Edit Conflict Guard is installed but has not been activated yet.', 'editlock' ); ?></strong>
+			</p>
+			<p>
+				<?php esc_html_e( 'Activate ETBS Edit Conflict Guard first.', 'editlock' ); ?>
+				<?php esc_html_e( 'Do not deactivate EditLock until then, or this site is left with no protection against save conflicts.', 'editlock' ); ?>
 			</p>
 		</div>
 		<?php

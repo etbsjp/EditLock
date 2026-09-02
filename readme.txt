@@ -14,6 +14,8 @@ Actually blocks the save, not just the notice: a per-post exclusive lock that st
 
 WordPress already tells you when someone else is editing a post: the "currently editing" notice under the post title. That notice is only a warning, though. It does not stop the second editor from clicking Update or Publish, and it does not stop the save. If two people edit the same post around the same time, whoever saves last silently overwrites the other person's changes, and nothing in WordPress core prevents that.
 
+**EditLock is now on WordPress.org as "ETBS Edit Conflict Guard".** It is the same plugin by the same author, renamed so it could be listed in the official plugin directory. New versions are published on WordPress.org from now on. Because the two use different plugin folders, WordPress cannot offer one as an update to the other, so the switch has to be made by hand. The plugin tells you how from your admin screens.
+
 EditLock adds a real, per-post exclusive lock on top of that notice. While one user has a post open for editing, EditLock blocks every other user from saving it, and it tells them clearly why.
 
 = How it works =
@@ -83,6 +85,9 @@ Yes, deliberately. If the same user opens the same post in a second tab, the sec
 
 == Changelog ==
 
+= 1.0.4 =
+* Added guidance for switching to the WordPress.org release, "ETBS Edit Conflict Guard". The lock behaviour is unchanged.
+
 = 1.0.3 =
 * Fix: uninstalling the plugin no longer deletes settings you configured (lock expiration, excluded post types). Only the plugin's own temporary lock data and its cleanup cron event are removed.
 
@@ -97,6 +102,9 @@ Yes, deliberately. If the same user opens the same post in a second tab, the sec
 * Initial release.
 
 == Upgrade Notice ==
+
+= 1.0.4 =
+EditLock is now on WordPress.org as "ETBS Edit Conflict Guard". This update only adds the switch-over instructions; the lock behaviour is unchanged.
 
 = 1.0.3 =
 Uninstalling in earlier versions deleted your saved lock-expiration and excluded-post-type settings. Update to keep your settings when uninstalling.
