@@ -6,6 +6,7 @@ if ( ! defined( 'ABSPATH' ) ) { exit; }
 /*-------------------------------------------*/
 require_once( dirname( __FILE__ ) . '/class-lock-manager.php' );
 require_once( dirname( __FILE__ ) . '/class-settings-page.php' );
+require_once( dirname( __FILE__ ) . '/class-migration-notice.php' );
 
 /*-------------------------------------------*/
 /* 翻訳ファイルの読み込み
