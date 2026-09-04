@@ -270,7 +270,7 @@ class Etbs_Ecg_Settings_Page {
 				<strong><?php esc_html_e( 'Support', 'etbs-edit-conflict-guard' ); ?></strong><br>
 				<?php
 				printf(
-					/* translators: %s: お問い合わせページへのリンク */
+					/* translators: %s: link to the contact page */
 					esc_html__( 'For paid support or custom development, please get in touch %s.', 'etbs-edit-conflict-guard' ),
 					'<a href="https://etbs.jp/product-category/wordpress-tools/?utm_source=etbs-edit-conflict-guard&utm_medium=plugin" target="_blank" rel="noopener noreferrer">' . esc_html__( 'via this page', 'etbs-edit-conflict-guard' ) . '</a>'
 				);

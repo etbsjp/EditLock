@@ -4,7 +4,7 @@ Donate link: https://etbs.jp/product/donate/
 Tags: post lock, concurrent editing, editorial workflow, multi author, save conflict
 Requires PHP: 7.4
 Tested up to: 7.1
-Stable tag: 1.1.0
+Stable tag: 1.1.1
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -82,6 +82,9 @@ Yes, deliberately. If the same user opens the same post in a second tab, the sec
 5. The support links as they appear on the Plugins list row and in the footer of the Settings > Edit Conflict Guard screen.
 
 == Changelog ==
+
+= 1.1.1 =
+* Added a bundled Japanese translation. Translations delivered by translate.wordpress.org still take precedence once they are available.
 
 = 1.1.0 =
 * Renamed the plugin to ETBS Edit Conflict Guard.
