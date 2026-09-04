@@ -14,13 +14,34 @@ require_once __DIR__ . '/class-etbs-ecg-lock-manager.php';
 require_once __DIR__ . '/class-etbs-ecg-settings-page.php';
 
 /*
- * Translations are delivered by translate.wordpress.org and land in WP_LANG_DIR/plugins,
- * where WordPress loads them just in time. No translation files are bundled with this
- * plugin, so load_plugin_textdomain() and the Domain Path header are unnecessary here.
+ * Translations were originally left entirely to translate.wordpress.org, which delivers them to
+ * WP_LANG_DIR/plugins for WordPress to load just in time. Nothing was bundled, so neither
+ * load_plugin_textdomain() nor the Domain Path header was needed here. That changed in 1.1.1: a
+ * Japanese translation is bundled under languages/ to cover the wait for translation-editor
+ * approval, so both are back. The registration lives in the main plugin file, above the legacy
+ * stand-down rather than here -- see the reason written at that call site.
  *
- * 翻訳は translate.wordpress.org から WP_LANG_DIR/plugins に届き、WordPress が
- * just-in-time で読み込む。同梱の翻訳ファイルは持たないため、load_plugin_textdomain()
- * と Domain Path ヘッダはこのプラグインには不要。
+ * A bundled file never beats a language pack. How that is enforced differs by version (before
+ * 6.1 load_plugin_textdomain() tried WP_LANG_DIR itself; 6.1-7.0 returned early once it found a
+ * pack there; 7.1 only registers the path and leaves every lookup to WP_Textdomain_Registry),
+ * but every one of them looks in WP_LANG_DIR/plugins before the bundled path. This plugin
+ * declares no "Requires at least", so all three are in scope -- do not write any single one of
+ * them down as "the" mechanism. An approved language pack therefore wins on its own, and the
+ * bundled copy needs no removal later.
+ *
+ * 翻訳は当初 translate.wordpress.org に完全に委ねていた。翻訳は WP_LANG_DIR/plugins に届き
+ * WordPress が just-in-time で読み込むため、同梱ファイルを持たず、load_plugin_textdomain() も
+ * Domain Path ヘッダもここには不要だった。1.1.1 でこれを変えた。翻訳編集者の承認を待つ間を
+ * 埋めるため日本語訳を languages/ に同梱したので、両方が戻っている。登録はここではなく
+ * メインファイルの legacy stand-down より上に置いた。理由はその呼び出し位置に書いてある。
+ *
+ * 同梱ファイルが言語パックに勝つことはない。ただしその実現方法はバージョンで違う
+ * （6.1 未満は load_plugin_textdomain() 自身が WP_LANG_DIR を試し、6.1〜7.0 はそこで
+ * 見つかれば早期 return、7.1 はパスを登録するだけで探索は WP_Textdomain_Registry に任せる）。
+ * どれも WP_LANG_DIR/plugins を同梱パスより先に見る点は共通。このプラグインは
+ * 「Requires at least」を宣言していないので3世代とも対象であり、
+ * どれか1つを「この機構」と書き切らないこと。したがって承認後は言語パックが自動的に勝ち、
+ * 同梱分を後から外す作業は要らない。
  */
 
 /*
@@ -393,7 +414,7 @@ if ( ! function_exists( 'edlk_pre_post_update_gate' ) ) {
 		wp_die(
 			esc_html(
 				sprintf(
-					/* translators: %s: ロックを保持しているユーザー名 */
+					/* translators: %s: name of the user holding the lock */
 					__( '%s is currently editing this post, so it could not be saved. Please reload the page and try again.', 'etbs-edit-conflict-guard' ),
 					$user ? $user->display_name : __( 'Another user', 'etbs-edit-conflict-guard' )
 				)
@@ -456,7 +477,7 @@ if ( ! function_exists( 'edlk_rest_pre_insert_gate' ) ) {
 		return new WP_Error(
 			'edlk_locked',
 			sprintf(
-				/* translators: %s: ロックを保持しているユーザー名 */
+				/* translators: %s: name of the user holding the lock */
 				__( '%s is currently editing this post, so it could not be saved.', 'etbs-edit-conflict-guard' ),
 				$user ? $user->display_name : __( 'Another user', 'etbs-edit-conflict-guard' )
 			),
@@ -520,7 +541,7 @@ if ( ! function_exists( 'edlk_pre_trash_post_gate' ) ) {
 		wp_die(
 			esc_html(
 				sprintf(
-					/* translators: %s: ロックを保持しているユーザー名 */
+					/* translators: %s: name of the user holding the lock */
 					__( '%s is currently editing this post, so it could not be moved to trash.', 'etbs-edit-conflict-guard' ),
 					$user ? $user->display_name : __( 'Another user', 'etbs-edit-conflict-guard' )
 				)
@@ -602,7 +623,7 @@ if ( ! function_exists( 'edlk_rest_pre_dispatch_trash_gate' ) ) {
 		return new WP_Error(
 			'edlk_locked',
 			sprintf(
-				/* translators: %s: ロックを保持しているユーザー名 */
+				/* translators: %s: name of the user holding the lock */
 				__( '%s is currently editing this post, so it could not be moved to trash.', 'etbs-edit-conflict-guard' ),
 				$user ? $user->display_name : __( 'Another user', 'etbs-edit-conflict-guard' )
 			),
@@ -652,11 +673,11 @@ if ( ! function_exists( 'edlk_admin_footer_text' ) ) {
 			. esc_html__( 'submit a request', 'etbs-edit-conflict-guard' ) . '</a>';
 
 		return sprintf(
-			/* translators: %s: 開発支援リンク */
+			/* translators: %s: link inviting the reader to support development */
 			__( 'If Edit Conflict Guard has been useful to you, please %s.', 'etbs-edit-conflict-guard' ),
 			$donate_link
 		) . ' ' . sprintf(
-			/* translators: %s: 開発依頼リンク */
+			/* translators: %s: link for requesting custom development */
 			__( 'For custom development, please %s.', 'etbs-edit-conflict-guard' ),
 			$request_link
 		);
