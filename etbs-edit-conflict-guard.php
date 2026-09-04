@@ -2,7 +2,7 @@
 /**
  * Plugin Name:       ETBS Edit Conflict Guard
  * Description:       A per-post exclusive lock plugin that actually blocks saving while another user is editing the post.
- * Version:           1.1.0
+ * Version:           1.1.1
  * Requires PHP:      7.4
  * Author:            ETBS (DAI)
  * Author URI:        https://etbs.jp
@@ -21,7 +21,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 	exit;
 }
 
-define( 'ETBS_ECG_VERSION', '1.1.0' );
+define( 'ETBS_ECG_VERSION', '1.1.1' );
 define( 'ETBS_ECG_PLUGIN_FILE', __FILE__ );
 
 /*
