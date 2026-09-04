@@ -10,9 +10,91 @@
 | メインファイル | `editlock.php` | **`etbs-edit-conflict-guard.php`** |
 | 関数・定数・オプションの接頭辞 | `edlk_` / `EDLK_` | **変更なし**（スラッグ由来ではないため。既存サイトの設定が残る） |
 
-★ `dist`（1.0.3）は**旧名のまま**。改名したのは wp.org 版だけで、両者は WordPress から見て別プラグイン。
+★ `dist`（1.0.4）は**旧名のまま**。改名したのは wp.org 版だけで、両者は WordPress から見て別プラグイン。
 
 etbs が配布する WordPress プラグイン。共通ルールの正本は `~/.claude/etbs-plugin-rules.md`。
+
+## ★★★ ブランチ
+
+| ブランチ | 中身 | 配信経路 |
+|---|---|---|
+| **`wporg`** | **wp.org 版（`ETBS Edit Conflict Guard`）。ここが wp.org 版の恒久の幹** | wordpress.org の SVN。**人が `svn ci` を押したときだけ** |
+| `dist` | 旧 EditLock 1.0.x（別プラグイン） | 同梱 PUC。**push した瞬間に既存 約19サイトへ** |
+
+★★ **`wporg` は `dist` 一本という共通ルール（`~/.claude/etbs-plugin-rules.md` §1）の意図的な例外。**
+棚卸しで「残置ブランチ」として削除しないこと。正本の EditLock 節にも同じ記載がある。
+
+★ **`wporg` へのマージは配信ではない。** 配信は SVN commit（人が押す）。この違いが下の「版数」節の
+例外の根拠になっている。
+
+### ★★ 接頭辞のルール
+
+`etbs-edit-conflict-guard.php` の **legacy stand-down（`Etbs_Ecg_Legacy_Guard::is_legacy_active()` の
+`return`）より前**で宣言する新しいシンボルは、必ず **`etbs_ecg_`** を使う。
+旧 EditLock が有効なサイトでもそのコードは実行される。旧版は `edlk_load_textdomain()` を
+`function_exists` ガード付きで宣言しており、`active_plugins` はソートされるので **`editlock/` が先**。
+そこで同名を使うと、**新版側が Cannot redeclare で Fatal**（新版はガードを付けない方針のため）。
+逆順で読まれた場合は**旧版のガードがスキップされ、旧版の翻訳が黙って死ぬ**。
+どちらも許容できないので、衝突しえない接頭辞を使う。
+
+`edlk_` を使ってよいのは `inc/func.php` の中（stand-down より後）だけ。**横並びで揃えにこないこと。**
+
+### ★★ `.po` を触ったら必ず `.mo` を再生成する
+
+`languages/` には `.po` と `.mo` の両方を追跡している。`.mo` を作り直さずにコミットすると、
+**画面は古い翻訳のまま、エラーも出ない。**
+
+### ★★ 静的解析の基準（このリポジトリは CI 対象外）
+
+EditLock は共通ルール 2.7 節で **CI（WPCS）の対象外**と決まっている（2026-08-28）。
+`.phpcs.xml.dist` も `composer.json` も無いのは書き忘れではなく、その決定の結果。
+
+★★ **ただしこの決定は「再提案しないこと」で止まっていない。** 正本 §2.7 は 2026-09-02 に
+**除外根拠の一部（「PUC が無い」）の失効を記録し、「CI 除外を維持するかは要再検討」**に戻している
+（#195 で PUC を `dist` に復元したため）。**判断は必ず正本を見ること。**
+ここに「再提案しないこと」とだけ書くと、正本を開かずに検討をやめてしまう。
+**手で回すときは standard とコマンドを固定すること。**「通過」では基準が無い。
+
+```sh
+# phpcs + WPCS は一時ディレクトリに入れてよい（リポジトリにファイルを足さない）
+phpcs --standard=WordPress-Extra --report=summary $(git ls-files '*.php')
+```
+
+| 対象 | 実測（2026-09-04） |
+|---|---|
+| `wporg`（1.1.0 / `c2ab176`） | **0 ERROR / 6 WARNING** |
+| 1.1.1 | **0 ERROR / 6 WARNING**（悪化ゼロ） |
+
+★ 合格線は「0 ERROR かつ **上の基準値からの悪化ゼロ**」。基準値は**その場で測り直してから**比べること。
+
+★★★ **`WordPress-Extra` には `WordPress-Docs` が入っていない。** PHPDoc の欠落はこの検査を
+すり抜ける（2026-09-04 に実際にすり抜けた）。**「0 ERROR」は PHPDoc を見ていない。**
+穴を知っているだけでは塞げないので、**PHPDoc は別に撃つこと**:
+
+```sh
+phpcs --standard=WordPress-Docs --sniffs=Squiz.Commenting.FunctionComment $(git ls-files '*.php')
+```
+
+（2026-09-04 実測: 1.1.0・1.1.1 とも指摘 **0 件**）
+
+★ 本来の門は Plugin Check（共通ルール 2.7）。**検査対象は zip の展開物**にすること。
+実測（2026-09-04・同一フォルダ名で測定）: 1.1.0 が **0 ERROR / 18 WARNING**、
+1.1.1 が **0 ERROR / 20 WARNING**。増えた 2 件は
+`PrefixAllGlobals.NonPrefixedFunctionFound`（`etbs_ecg_load_textdomain`）と
+`DiscouragedFunctions.load_plugin_textdomain`。**どちらも意図した実装の結果**で、前者は
+`function_exists` ガードを外したことで可視化されたもの、後者は同梱翻訳そのものへの指摘。
+★ 「`edlk_` 接頭辞なら警告されない」ではない —— `inc/func.php` の `edlk_*` 24 本が出ないのは
+**ガードの中にあるため**で、`uninstall.php` の `edlk_uninstall()` はガード外なので**基準の 18 件側に
+含まれている**。
+
+★★★ **この 2 件は永久に出続ける。消しにいかないこと。**
+
+- `PrefixAllGlobals` に合わせて `etbs_ecg_load_textdomain` を改名すると、上の**接頭辞ルールと衝突する**
+- ★★ **`DiscouragedFunctions` を消す目的で `load_plugin_textdomain()` を外さないこと。**
+  外すと同梱の `languages/` が `WP_Textdomain_Registry` に custom path として登録されず、
+  JIT はそこを探しに行かない。**画面は英語に戻るが、エラーは一切出ない。**
+  この警告の前提（「wp.org がホストするなら言語パックが届くので手動で呼ぶ必要はない」）は、
+  **同梱ファイルを持つこのプラグインには当てはまらない**
 
 ## レビュー工程に大（シニアエンジニア）を追加する
 
@@ -50,6 +132,24 @@ CLI 検証では Local の php.ini を `-c` で渡すこと。渡さないと「
 
 ```sh
 readlink "$HOME/Local Sites/editlock/app/public/wp-content/plugins/editlock"
+ls       "$HOME/Local Sites/editlock/app/public/wp-content/plugins"
+```
+
+★★ **`readlink` だけでは足りない。`ls` も必ず見ること。** 検証で zip 展開物を
+`wp-content/plugins/etbs-edit-conflict-guard/` に**実体ディレクトリとして**置くことがあり、
+それが残っていると `readlink` は「本体クローンを向いている、OK」と答えるのに、
+実際に動いているのは置き去りの展開物になる。**このガード自体が無効化される。**
+
+★★ **旧版を退避したら必ず戻すこと。** 旧版（`editlock` symlink）を外して検証するときは
+`.editlock-parked` のように**先頭ドット**へ改名する（コアの `get_plugins()` は
+`str_starts_with( $file, '.' )` で読み飛ばすため、`active_plugins` の編集と二重に効く）。
+**撤収では `active_plugins` を戻す前にフォルダ名を戻す。** 順番を逆にすると、存在しない
+プラグインを有効化することになり、`readlink` が空を返す状態で次のセッションが始まる。
+
+```sh
+P="$HOME/Local Sites/editlock/app/public/wp-content/plugins"
+mv "$P/editlock" "$P/.editlock-parked"   # 検証前
+mv "$P/.editlock-parked" "$P/editlock"   # 撤収時（active_plugins を戻す前）
 ```
 
 → **そのままでは、画面で見ているのは実装前のコード。** 2026-08-25 の #2（UI文言の英語化）で実際に起きた。
@@ -71,7 +171,23 @@ ln -sfn ~/Downloads/GitHub/editlock "$P"                                # 検証
 サイト稼働版の PHP は `lsof -p <php-fpm master PID> | grep lightning-services` で特定する
 （2026-08-25 時点で **8.3.17**）。`wp-load.php` を読み `switch_to_locale()` で切り替え、
 `.po` の msgid を全件 `__()` に通せば「英語で日本語0件／日本語で全件翻訳」が数で出る。
-`is_textdomain_loaded()` も併せて見ること。`set_current_screen()` を使うなら
+
+★★★ **`is_textdomain_loaded()` を合格条件にしないこと**（2026-09-04 に実測で否定した）。
+WP 7.1 の `load_plugin_textdomain()` は `set_custom_path()` を呼んで `return true` するだけで、
+**実際の読み込みを一切しない**（`WP_LANG_DIR` を試す処理も `load_textdomain()` の呼び出しも無い）。
+したがって**呼んだ直後は必ず false** になる。読み込みは最初の `__()` による JIT で起きる。
+
+代わりに、ロケールを切り替えた**後**に読み込み元の実パスを断定する:
+
+```php
+$GLOBALS['wp_textdomain_registry']->get( 'etbs-edit-conflict-guard', 'ja' );
+// → .../plugins/etbs-edit-conflict-guard/languages/ で終わること
+```
+
+あわせて `wp-content/languages/plugins/etbs-edit-conflict-guard-ja*` が**無い**ことも毎回見る
+（言語パックが来ていれば同梱を読まなくても日本語になるため、同梱の検証にならない）。
+
+★ `set_current_screen()` を使うなら
 `wp-admin/includes/class-wp-screen.php` を先に require する。
 
 ## アンインストール
@@ -99,28 +215,30 @@ ln -sfn ~/Downloads/GitHub/editlock "$P"                                # 検証
 
 ## 版数
 
-★★★ **実装の PR で版数を上げてはいけない。** 実装コミットだけを積むこと。
+★★★ **`dist` 系列では、実装の PR で版数を上げてはいけない。** 実装コミットだけを積むこと。
+
+★ **`wporg` 系列（wp.org 版）はこの規定の対象外。** 禁止の根拠は「`dist` は push＝即配信」であって、
+`wporg` にその経路は無い（配信は人が押す SVN commit）。加えて Plugin Check の `stable_tag_mismatch` は
+`Version:` と `Stable tag:` の一致を見るため、版数を抜いた木は提出物と別物になり、提出用 zip は
+`git archive` で作るので**版数が git に無いと提出物を履歴から再現できない**。上の「ブランチ」節を参照。
 
 - `dist` は配信先そのもの。版数を上げてマージした瞬間に、既存の自社配布ユーザー（2026-08-25 実測で
   約19サイト）へ配られる
-- とくに公式ディレクトリ移行中は危険で、**PUC を撤去済みの版が配られた時点で、以後こちらから更新も案内も
-  一切届かなくなる**（移行の案内を出す手段が消える）
 - 版数上げ・`dist` push は **engine を止めてから人が行う**（`~/.claude/etbs-plugin-rules.md`）
-- 公式化の直列では **1.1.0 への引き上げは #4 でまとめて行う**。#1〜#3 では触らない
 
-★★★ **PUC はもう `dist` から撤去済み**（#1 / `d7fdc09`。`git ls-tree -r dist | grep update-checker` は 0 件）。
-これは「これから気をつける話」ではない。**罠は装填済みで、安全弁は「版数が 1.0.3 のままである」の一点だけ**。
-既存サイトの PUC が `dist` を見に行っても、宣言が 1.0.3 で手元も 1.0.3 だから更新が提示されない、それだけで止まっている。
+★★★ **PUC は `dist` に入っている**（実測 2026-09-04:
+`git ls-tree -r --name-only dist | grep -c update-checker` → **116**）。
+#195 で `d7fdc09^` からバイト単位で復元し、**1.0.4 として既に配信済み**。
+★★ **移行案内はもう届けた。**「撃てる弾が1発だけ残っている」という状態ではない。
 
-→ **次に版数を上げて `dist` へ push した瞬間に、PUC 無しの版が既存 約19サイトへ確定的に配られ、以後こちらからは
-何も届かなくなる。不可逆。** #4 は 1.1.0 への引き上げが本題なので、ここに正面から当たる。
-**1.1.0 を `dist` へ push する前に「移行案内をどう届けるか」を決めること。上げてからでは手段が無い。**
+★ このファイルには 2026-09-04 まで「PUC は撤去済み・0件」「`dist` は 1.0.3 のまま凍結」「撃てる弾は1発だけ」と
+書かれていたが、**#195 の実施後もその記述が更新されておらず、すべて実態と食い違っていた**ので削除した。
+実測ラベル（「実測 2026-08-31」）まで付いていたため、次に読む人が再検証せずに信じる状態だった。
+その誤情報は「もう経路は無い」という結論を導き、正本 §1 が禁じている `dist` の private 化・削除への
+入口になる。**数字を書くときは、その場でコマンドを走らせてから書くこと。**
 
-★★★ **1.1.0 は wordpress.org で公開されるまで `dist` にマージしない**（2026-08-25 決定）。
-
-#4 の完了条件は「申請できる zip を作る」であって、`dist` へのマージではない。**1.1.0 のコミットと zip は作るが、
-PR は開けたまま #36 の申請が通るのを待つ。** タスクが `status:waiting-merge` で長く止まるのは想定どおりで、
-停滞ではない。
+→ したがって **`dist` の版数を上げてよいのは ①セキュリティ修正 ②新しい WP での動作不能 の2つだけ**
+（`~/.claude/etbs-plugin-rules.md` §1）。
 
 ★★★ **改名によって「引き渡し」は成立しなくなった（2026-08-31）。**
 
@@ -128,24 +246,9 @@ PR は開けたまま #36 の申請が通るのを待つ。** タスクが `stat
 照会する。既存 約19サイトのフォルダは `editlock`、wp.org 版は `etbs-edit-conflict-guard` なので、
 **この2つは永久に繋がらない。**
 
-→ 以前ここに書いていた「公開後に 1.1.0 を `dist` へマージすれば既存サイトが wp.org に移る」は**誤り**。
-そのまま実行すると19サイトは PUC を失うだけで、更新経路がゼロになる。
-
-**決定（2026-08-31）：`dist` は 1.0.3 のまま凍結する。**
-移行は将来 `dist` 側に 1.0.4 を出し、管理画面の notice で wp.org 版への入れ替えを案内して行う。
-
-★★★ **ただし「PUC 付きで凍結」ではない。`dist` に PUC はもう入っていない**（実測 2026-08-31。
-`git ls-tree -r --name-only dist` の13ファイルに `plugin-update-checker` は0件、
-`editlock.php` にも PUC の呼び出しは無い。撤去は #1 / PR #7 で `dist` にマージ済み）。
-
-**帰結：撃てる弾は1発だけ。**【一部推測】既存19サイトに**インストール済みのコピー**には PUC が
-同梱されており、`dist` のヘッダ版数がずっと 1.0.3 なので更新が提示されず、いまも PUC 入りの版が
-動いているはず。だから 1.0.4 は**届く**。しかし 1.0.4 は `dist` から作られる＝PUC を含まないので、
-**受け取った瞬間に経路が切れる。文面を間違えても撤回も訂正もできない。**
-
-→ 1.0.4 に着手するときは、先にどちらかを選ぶこと。
-**(a)** 1.0.4 のブランチにだけ PUC を戻して経路を残す。
-**(b)** 終端リリースだと承知のうえで、文面を人が確認してから押す。
+→ したがって **`wporg` 系列を `dist` にマージすることは永久に無い。** 「公開されるまで待つ」といった
+条件付きの保留ではない。`pr-10`（1.1.0）は 2026-09-02 に CLOSED、ローカルブランチも 2026-09-04 に
+削除済み（`69eb1b8`）。両者は WordPress から見て別プラグインなので、**マージは移行の手段にならない。**
 
 ★ 乗っ取りリスクは残るが、想定より小さい。今回の審査で `editlock` は `edit-lock` との類似を理由に
 弾かれており、同じ門は他人にも立つ【推測】。ただしスラッグは返信で個別に要求できるためゼロではない。
@@ -171,21 +274,32 @@ PR は開けたまま #36 の申請が通るのを待つ。** タスクが `stat
 へ作り直すこと（`Plugin URI:` がこの URL を指している）。
 
 ★ 2026-08-25 に #1 の PR で 1.0.3 → 1.0.4 に上げられ、マージ前に revert した実績がある。
-下の「版数の置き場は3箇所」は**人がリリース時に上げるときの手順**であって、実装 PR の話ではない。
+下の「版数の置き場」は**`dist` 系列で人がリリース時に上げるときの手順**。`wporg` 系列では実装 PR に含める
+（上の「版数」節の例外を参照）。
 
-★★★ **版数の置き場は3箇所。**（#3 で `readme.txt` を追加したため 2 → 3 に増えた）
+★★★ **版数の置き場は「固定パターンの grep で守れる3箇所」＋「changelog 追記1件」。**
+（#3 で `readme.txt` を追加したため 2 → 3 に増えた）
+
+**grep で守れる3箇所**:
 
 - `etbs-edit-conflict-guard.php` の `Version:` ヘッダ
-- `etbs-edit-conflict-guard.php` の `define( 'EDLK_VERSION', ... )`（`inc/func.php` で `wp_enqueue_script()` の
-  キャッシュバスターとして使用中）
+- `etbs-edit-conflict-guard.php` の `define( 'ETBS_ECG_VERSION', ... )`
+  （`wp_enqueue_script()` のキャッシュバスターとして使用中。★ **参照箇所に行番号を書かない**——
+  2026-09-04 にここへ `inc/func.php:224` と書いたところ、**同じ PR の次のコミットが同ファイルに
+  21 行足して 245 になり、その場で無効化した**。`grep -rn ETBS_ECG_VERSION --include=*.php .` で見ること）
 - **`readme.txt` の `Stable tag:`**
 
-**現在は3箇所とも一致している**（PR #10 上では 1.1.0、`dist` 上では 1.0.3）。上げる際は3つとも揃えること。
-
 ```sh
-grep -nE "^ \* Version:|define\( 'EDLK_VERSION'" etbs-edit-conflict-guard.php
+grep -nE "^ \* Version:|define\( 'ETBS_ECG_VERSION'" etbs-edit-conflict-guard.php
 grep -n  "^Stable tag:" readme.txt
 ```
+
+★★ **`readme.txt` の `== Changelog ==` にその版のエントリを書くことは、上の3箇所とは別立てにする。**
+確認できないわけではない（`grep -n "^= 1\.1\.1 =" readme.txt`）が、**版数ごとにパターンを書き換える
+必要がある**ので固定パターンの grep 2本には混ぜない。混ぜると「**grep が緑だから全部揃った**」と
+読まれ、changelog が空のまま出る。
+
+★ 上げる際は3つとも揃えること。**現在値はここに書かない**（必ず陳腐化する）。上の grep で確認する。
 
 ★★ **`Stable tag` を揃え忘れると2通りに壊れる。** Plugin Check が `stable_tag_mismatch` を出して
 止まるか、気付かず wp.org の SVN へ上げた場合は **`Stable tag` が指すタグが配信版になる**ため、
@@ -209,6 +323,8 @@ grep -n  "^Stable tag:" readme.txt
 1件も無く、何をもって通したかを後から追えなかった）。
 
 ## 配布物
+
+★ **この節は `dist` 系列の話。** `wporg` に PUC は無く、配布物は `git archive` から作って人が SVN へ上げる。
 
 `dist` ブランチへのマージ＝配信。PUC が配る zip には**追跡しているファイルが全部入る**ため、
 `.gitignore`（追跡させない）と `.gitattributes` の `export-ignore`（zip から落とす）は役割が別。
@@ -241,7 +357,8 @@ grep -n  "^Stable tag:" readme.txt
 **ヘッダの `Requires at least` / `Requires PHP` を変更したときは、`README.md` と `readme.txt` の
 該当箇所も同時に見直すこと。** ★とくに `readme.txt` 側は忘れやすいのに影響が大きい ——
 **PUC は `setInfoFromRemoteReadme()` で `readme.txt` の値をヘッダに上書きする**ため、
-readme が古いと配信判定まで古い値で動く（`~/.claude/etbs-plugin-rules.md`）。 `README.md` は `export-ignore` されておらず配布 zip に含まれるため、
+readme が古いと配信判定まで古い値で動く（`~/.claude/etbs-plugin-rules.md`）。★ **これは `dist` 系列の話**
+（`wporg` に PUC は無い）。 `README.md` は `export-ignore` されておらず配布 zip に含まれるため、
 ヘッダだけ直しても README が古いままだと利用者には要件が伝わり続ける。揃えないまま放置すると、
 次に見た人がどちらが正しいか分からず、README に合わせてヘッダへ過剰宣言を書き戻す方向に
 動きかねない。
