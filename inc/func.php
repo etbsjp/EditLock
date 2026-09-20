@@ -687,11 +687,19 @@ if ( ! function_exists( 'edlk_pre_post_update_gate' ) ) {
 			}
 		}
 
+		/*
+		 * Quick Edit is an Ajax request, and core's inline-edit-post.js draws the response text only in its
+		 * success callback; it has no failure callback. A 409 would leave the spinner turning with no message,
+		 * which is why core's own _ajax_wp_die_handler defaults to 200. So Ajax gets 200 and every other save 409.
+		 * クイック編集は Ajax で、コアの inline-edit-post.js は成功コールバックでしか応答文を描画せず、
+		 * 失敗コールバックを持たない。409 だとメッセージが出ないままスピナーが回り続ける。コア自身の
+		 * _ajax_wp_die_handler の既定が 200 なのはこのため。Ajax は 200、それ以外の保存は 409 にする。
+		 */
 		wp_die(
 			$message, // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- Every part is escaped above.
 			esc_html__( 'Save Blocked', 'etbs-edit-conflict-guard' ),
 			array(
-				'response'  => 409,
+				'response'  => wp_doing_ajax() ? 200 : 409,
 				'back_link' => true,
 			)
 		);

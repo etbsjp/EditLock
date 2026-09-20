@@ -13,6 +13,14 @@
 abstract class Etbs_Ecg_Test_Case extends WP_UnitTestCase {
 
 	/**
+	 * HTTP status the last run_save_gate() stopped the save with, or null when it let the save through.
+	 * 直近の run_save_gate() が保存を止めたときの HTTP ステータス。通したときは null。
+	 *
+	 * @var int|null
+	 */
+	protected $last_gate_status = null;
+
+	/**
 	 * Empties the lock table and resets per-request state before each test.
 	 * 各テストの前に、ロックテーブルとリクエスト内の状態を初期化する。
 	 *
@@ -114,9 +122,13 @@ abstract class Etbs_Ecg_Test_Case extends WP_UnitTestCase {
 	 * @return string|null The wp_die() message when the save was stopped, or null when it went through.
 	 */
 	protected function run_save_gate( $post_id ) {
+		$this->last_gate_status = null;
 		try {
 			edlk_pre_post_update_gate( $post_id, array() );
 		} catch ( WPDieException $e ) {
+			// The suite's wp_die handler turns the 'response' argument into the exception code.
+			// スイートの wp_die 処理は、'response' 引数を例外のコードにする.
+			$this->last_gate_status = $e->getCode();
 			return $e->getMessage();
 		}
 		return null;

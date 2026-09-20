@@ -307,6 +307,7 @@ class Test_Etbs_Ecg_Func extends Etbs_Ecg_Test_Case {
 				'lock'                => 'other',
 				'post_session'        => '',
 				'expected_blocked'    => true,
+				'expected_status'     => 409,
 				'expected_contains'   => 'Alice Example is currently editing this post, so it could not be saved.',
 			),
 			array(
@@ -332,15 +333,17 @@ class Test_Etbs_Ecg_Func extends Etbs_Ecg_Test_Case {
 				'post_session'        => '',
 				'bulk'                => true,
 				'expected_blocked'    => true,
+				'expected_status'     => 409,
 				'expected_contains'   => 'Processing stopped at this post:',
 			),
 			array(
-				'test_condition_name' => 'クイック編集（Ajax）の場合 => 本文はタグの無い文だけ（インラインのエラー表示に出るため）',
+				'test_condition_name' => 'クイック編集（Ajax）の場合 => 本文はタグの無い文だけ、ステータスは 200（コアの inline-edit-post.js は成功コールバックでしか描画しないため。409 だとスピナーが回り続ける）',
 				'admin'               => true,
 				'ajax'                => true,
 				'lock'                => 'other',
 				'post_session'        => '',
 				'expected_blocked'    => true,
+				'expected_status'     => 200,
 				'expected_exact'      => 'Alice Example is currently editing this post, so it could not be saved.',
 			),
 			array(
@@ -415,6 +418,9 @@ class Test_Etbs_Ecg_Func extends Etbs_Ecg_Test_Case {
 			}
 			if ( ! empty( $case['bulk'] ) ) {
 				$this->assertStringNotContainsString( 'Back button', (string) $message, $case['test_condition_name'] );
+			}
+			if ( isset( $case['expected_status'] ) ) {
+				$this->assertSame( $case['expected_status'], $this->last_gate_status, $case['test_condition_name'] );
 			}
 			if ( isset( $case['expected_exact'] ) ) {
 				$this->assertSame( $case['expected_exact'], $message, $case['test_condition_name'] );
