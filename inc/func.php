@@ -469,7 +469,7 @@ if ( ! function_exists( 'edlk_ajax_acquire' ) ) {
 			wp_send_json_error( array( 'message' => __( 'You do not have permission to do this.', 'etbs-edit-conflict-guard' ) ) );
 		}
 
-		$session_id = isset( $_POST['session_id'] ) ? edlk_sanitize_session_id( wp_unslash( $_POST['session_id'] ) ) : '';
+		$session_id = isset( $_POST['session_id'] ) ? edlk_sanitize_session_id( sanitize_text_field( wp_unslash( $_POST['session_id'] ) ) ) : '';
 		if ( '' === $session_id ) {
 			wp_send_json_error( array( 'message' => __( 'Invalid session ID.', 'etbs-edit-conflict-guard' ) ) );
 		}
@@ -491,7 +491,7 @@ if ( ! function_exists( 'edlk_ajax_release' ) ) {
 		check_ajax_referer( 'edlk_nonce', 'nonce' );
 
 		$post_id    = isset( $_POST['post_id'] ) ? absint( wp_unslash( $_POST['post_id'] ) ) : 0;
-		$session_id = isset( $_POST['session_id'] ) ? edlk_sanitize_session_id( wp_unslash( $_POST['session_id'] ) ) : '';
+		$session_id = isset( $_POST['session_id'] ) ? edlk_sanitize_session_id( sanitize_text_field( wp_unslash( $_POST['session_id'] ) ) ) : '';
 		if ( $post_id && '' !== $session_id && current_user_can( 'edit_post', $post_id ) ) {
 			Etbs_Ecg_Lock_Manager::release( $post_id, $session_id );
 		}
@@ -656,7 +656,7 @@ if ( ! function_exists( 'edlk_pre_post_update_gate' ) ) {
 		}
 
 		// WordPressコア（post.php）が投稿保存の直前に既にnonce検証を済ませているため、ここでの再検証は不要.
-		$session_id = isset( $_POST['edlk_session_id'] ) ? edlk_sanitize_session_id( wp_unslash( $_POST['edlk_session_id'] ) ) : ''; // phpcs:ignore WordPress.Security.NonceVerification.Missing
+		$session_id = isset( $_POST['edlk_session_id'] ) ? edlk_sanitize_session_id( sanitize_text_field( wp_unslash( $_POST['edlk_session_id'] ) ) ) : ''; // phpcs:ignore WordPress.Security.NonceVerification.Missing
 		edlk_current_session_id( $session_id );
 
 		if ( '' !== $session_id && Etbs_Ecg_Lock_Manager::is_holder( $post_id, $session_id ) ) {
