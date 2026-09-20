@@ -211,6 +211,23 @@
 	}
 
 	/**
+	 * Removes a notice made by showNotice(), in both editors. A notice that says "you cannot save" must not
+	 * outlive the situation it describes.
+	 * showNotice() で出した通知を、両エディタから消す。「保存できません」と言う通知が、その状況が
+	 * 終わったあとも残り続けてはいけない。
+	 */
+	function clearNotice( id ) {
+		try {
+			var notices = window.wp && wp.data && wp.data.dispatch( 'core/notices' );
+			if ( notices && notices.removeNotice ) { notices.removeNotice( id ); }
+		} catch ( err ) {
+			// When the store is unavailable there is no block-editor notice to remove.
+			// ストアが使えないときは、ブロックエディタ側に消す通知が無い。
+		}
+		$( '#' + id ).remove();
+	}
+
+	/**
 	 * Tries to acquire the lock (keeps it if already held; returns the holder if someone else has it).
 	 * The callback receives { ok, locked, holderName, holderIsSelf }; ok means the server answered properly.
 	 * ロック取得を試みる（既に保持していれば維持、他者保持中ならその情報を返す）。
@@ -233,7 +250,13 @@
 				holderName:   res.data.holderName || '',
 				holderIsSelf: !! res.data.holderIsSelf
 			};
-			if ( ! result.locked ) { hasHeldLock = true; }
+			if ( ! result.locked ) {
+				hasHeldLock = true;
+				// The lock is ours now, so neither "open in another edit screen" nor "taken over" is true any more.
+				// ロックはこの画面のものになったので、「別の編集画面で開かれている」も「奪われた」ももう偽になる。
+				clearNotice( 'edlk-self-lock' );
+				clearNotice( 'edlk-lock-lost' );
+			}
 			callback( result );
 		} ).fail( function() {
 			// On a network error the save is left to the server-side gate.
