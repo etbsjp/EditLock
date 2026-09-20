@@ -20,7 +20,7 @@ ETBS Edit Conflict Guard adds a real, per-post exclusive lock on top of that not
 
 * Opening a post's edit screen tries to acquire a lock on that post (first person to open it gets the lock).
 * While the edit screen stays open, the lock is automatically extended through the standard WordPress Heartbeat API.
-* Clicking Save Draft, Update, or Publish (Classic Editor or Block Editor) checks the lock. If someone else holds it, the save is blocked and a modal explains why.
+* Clicking Save Draft, Update, or Publish (Classic Editor or Block Editor) checks the lock. If someone else (including another edit screen of the same account) holds it, the save is blocked and a modal explains why.
 * The lock is released when you leave the edit screen, or when Heartbeat stops (for example the tab is closed) and the lock's expiration time passes. A Classic Editor save also releases it, because the screen reloads. A Block Editor save keeps it, because you keep editing in the same tab.
 * Autosaves neither take nor release the lock, and the lock never blocks them.
 * The block is enforced on the server as well, on the Classic Editor's post save and the Block Editor's REST save, so the lock still holds even with JavaScript disabled or the connection unreliable.

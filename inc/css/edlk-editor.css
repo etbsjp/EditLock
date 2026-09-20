@@ -37,6 +37,12 @@
 	padding: 24px 28px;
 }
 
+/* A long display name (an e-mail address, say) has no break point, so let it wrap instead of overflowing at 360px. */
+.edlk-dialog__title,
+.edlk-dialog__body {
+	overflow-wrap: anywhere;
+}
+
 .edlk-dialog__title {
 	margin: 0 0 8px;
 	font-size: 15px;
