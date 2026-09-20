@@ -1,0 +1,76 @@
+/* ==========================================================================
+   Save-blocked dialog on the post edit screen
+   投稿編集画面の「保存を止めた」ダイアログ
+   ========================================================================== */
+
+/*
+ * The dialog does not follow dark mode on purpose. The WordPress admin has no dark mode, so a dark
+ * dialog would float black inside a white admin screen. Colors are set explicitly and the browser is
+ * told this element is light only (color-scheme), so it does not repaint the dialog in dark mode.
+ * ダイアログはダークモードに追従させない（意図的）。WordPress 管理画面にはダークモードが無く、
+ * 追従させると白い管理画面の中でこのダイアログだけが黒く浮く。色を明示し、color-scheme でブラウザにも
+ * 「この要素はライトのみ」と伝えて、ダークモードで勝手に塗り替えさせない。
+ */
+.edlk-dialog {
+	box-sizing: border-box;
+	width: auto;
+	min-width: 0;
+	max-width: min(420px, calc(100vw - 32px));
+	padding: 0;
+	border: 1px solid #c3c4c7;
+	border-radius: 4px;
+	background: #fff;
+	color: #3c434a;
+	color-scheme: light;
+	box-shadow: 0 4px 16px rgba(0, 0, 0, 0.15);
+}
+
+.edlk-dialog::backdrop {
+	background: rgba(0, 0, 0, 0.5);
+}
+
+/* Inner box（padding はここに持たせる。dialog 自体に持たせると、余白のクリックで閉じてしまう）
+   ========================================================================== */
+
+.edlk-dialog__inner {
+	box-sizing: border-box;
+	padding: 24px 28px;
+}
+
+.edlk-dialog__title {
+	margin: 0 0 8px;
+	font-size: 15px;
+	font-weight: 600;
+	line-height: 1.4;
+	color: inherit;
+}
+
+.edlk-dialog__body p,
+.edlk-dialog__admin {
+	margin: 0 0 8px;
+	font-size: 13px;
+	line-height: 1.5;
+}
+
+.edlk-dialog__body p:last-child {
+	margin-bottom: 0;
+}
+
+.edlk-dialog__admin {
+	margin-top: 12px;
+}
+
+.edlk-dialog__admin[hidden] {
+	display: none;
+}
+
+/* Buttons（ボタン。狭い幅では折り返す）
+   ========================================================================== */
+
+.edlk-dialog__buttons {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 8px;
+	justify-content: flex-end;
+	margin-top: 16px;
+}
