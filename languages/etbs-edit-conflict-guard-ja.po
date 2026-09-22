@@ -160,22 +160,26 @@ msgid "Save blocking works for saves made from the admin screens (the edit scree
 msgstr "保存ブロックが機能するのは、管理画面（編集画面・クイック編集・一括編集）からの保存と、REST API のリクエストです。"
 
 #: inc/class-etbs-ecg-settings-page.php:265
+msgid "Autosaves are never blocked, in either editor."
+msgstr "自動保存は、どちらのエディターでもブロックされません。"
+
+#: inc/class-etbs-ecg-settings-page.php:266
 msgid "Saves that run without WP_ADMIN defined, such as WP-Cron, WP-CLI, XML-RPC and front-end code that calls wp_update_post() directly, are not blocked."
 msgstr "WP-Cron・WP-CLI・XML-RPC や、フロント側のコードが wp_update_post() を直接呼ぶ場合など、WP_ADMIN が定義されない経路で実行される保存はブロックされません。"
 
-#: inc/class-etbs-ecg-settings-page.php:266
+#: inc/class-etbs-ecg-settings-page.php:267
 msgid "Front-end forms that post to admin-post.php or admin-ajax.php are still blocked while the sender is logged in, because WordPress defines WP_ADMIN there."
 msgstr "admin-post.php や admin-ajax.php に POST するフロント側のフォームは、WordPress がそこで WP_ADMIN を定義するため、送信者がログインしている限り引き続きブロックされます。"
 
-#: inc/class-etbs-ecg-settings-page.php:267
+#: inc/class-etbs-ecg-settings-page.php:268
 msgid "Trash blocking, when \"Also lock trash actions\" is enabled, works for processing that goes through wp_trash_post(), or DELETE requests to the REST API."
 msgstr "ゴミ箱ブロックは「ゴミ箱への移動もロック対象にする」が有効な場合のみ、wp_trash_post() を経由する処理、または REST API の DELETE リクエストに対して機能します。"
 
-#: inc/class-etbs-ecg-settings-page.php:268
+#: inc/class-etbs-ecg-settings-page.php:269
 msgid "Neither applies to plugins or custom code that writes to the database directly, such as via $wpdb->update()."
 msgstr "$wpdb->update() などでデータベースを直接書き換えるプラグイン・自作コードには、どちらも適用されません。"
 
-#: inc/class-etbs-ecg-settings-page.php:272
+#: inc/class-etbs-ecg-settings-page.php:273
 msgid "Support"
 msgstr "サポート"
 

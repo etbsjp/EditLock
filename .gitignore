@@ -53,3 +53,7 @@ CLAUDE.local.md
 
 # macOS
 .DS_Store
+
+# PHPUnit の結果キャッシュ（tests/phpunit.xml.dist で cacheResult=false にしているが、
+# -c を付け忘れた実行や別コンフィグでは作られるため、ここでも止める）
+.phpunit.result.cache
