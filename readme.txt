@@ -60,7 +60,7 @@ Edit Conflict Guard is intentionally strict and, as a result, has a few rough ed
 
 = How is this different from the "Someone else is editing this" notice WordPress already shows? =
 
-That built-in notice is informational only; it does not stop a second user from saving. This plugin adds an actual block: if someone else holds the lock, clicking Save/Update/Publish is refused (the request is refused; Quick Edit shows the same reason inline) and the user sees a modal explaining why, instead of silently overwriting the other person's changes.
+That built-in notice is informational only; it does not stop a second user from saving. This plugin adds an actual block: if someone else holds the lock, clicking Save/Update/Publish is refused and the user sees a modal explaining why (in Quick Edit the same reason appears inline instead), rather than silently overwriting the other person's changes.
 
 = A lock seems stuck. How do I clear it? =
 
