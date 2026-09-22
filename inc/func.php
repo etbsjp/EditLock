@@ -235,9 +235,39 @@ if ( ! function_exists( 'edlk_heartbeat_received' ) ) {
 /* REST経由の更新も内部的に wp_insert_post() を呼ぶためここを通過するが、REST側は
 /* rest_pre_insert_gate() で既に判定済み（$_POSTにセッションIDが乗らないため二重判定を避ける）。
 /*-------------------------------------------*/
+if ( ! function_exists( 'edlk_is_autosave_request' ) ) {
+	/**
+	 * 現在の保存が自動保存かどうかを返す。
+	 *
+	 * DOING_AUTOSAVE だけに頼らない。WP_REST_Autosaves_Controller::create_item() は
+	 * WP_RUN_CORE_TESTS が定義されているとこの定数を立てないため、テストスイート上で
+	 * 判定がすり抜ける。REST のときはルート末尾も見る。
+	 *
+	 * @param WP_REST_Request|null $request 判定対象の REST リクエスト。REST 以外では null。
+	 * @return bool 自動保存なら true。
+	 */
+	function edlk_is_autosave_request( $request = null ) {
+		if ( defined( 'DOING_AUTOSAVE' ) && DOING_AUTOSAVE ) {
+			return true;
+		}
+		if ( $request instanceof WP_REST_Request ) {
+			return 1 === preg_match( '#/autosaves$#', (string) $request->get_route() );
+		}
+		return false;
+	}
+}
+
 if ( ! function_exists( 'edlk_pre_post_update_gate' ) ) {
 	function edlk_pre_post_update_gate( $post_id, $data ) {
 		if ( defined( 'REST_REQUEST' ) && REST_REQUEST ) { return; }
+
+		/*
+		 * 自動保存は「編集の終了」ではなく、他ユーザーの自動保存はコア側が親投稿に触れさせない
+		 * （ユーザーごとのリビジョンに回す）ため、このゲートで守るものが無い。止めると本人の自動保存を
+		 * 黙って壊すだけになる（wp_autosave() はセッション ID を送らないため、保持者本人のタブを
+		 * 見分けられない）。
+		 */
+		if ( edlk_is_autosave_request() ) { return; }
 		if ( ! edlk_is_post_type_enabled( get_post_type( $post_id ) ) ) { return; }
 
 		$session_id = sanitize_text_field( wp_unslash( $_POST['edlk_session_id'] ?? '' ) );
@@ -277,6 +307,15 @@ if ( ! function_exists( 'edlk_register_rest_gates' ) ) {
 
 if ( ! function_exists( 'edlk_rest_pre_insert_gate' ) ) {
 	function edlk_rest_pre_insert_gate( $prepared_post, $request ) {
+		/*
+		 * 自動保存ルートでは WP_Error を返さない。コアの WP_REST_Autosaves_Controller::create_item() は
+		 * prepare_item_for_database() の戻り値を is_wp_error() で見ないため、WP_Error が配列にキャストされて
+		 * wp_update_post() に渡る。保存済みの内容は壊れない（wp_update_post() は既存の行にマージし、
+		 * キャストした配列に投稿フィールドが無いため）が、自動保存は 200 を返しながら何も書かず、
+		 * save_post だけが発火してこのプラグインのロックが解放される。
+		 */
+		if ( edlk_is_autosave_request( $request ) ) { return $prepared_post; }
+
 		$post_id = (int) ( $prepared_post->ID ?? 0 );
 		if ( ! $post_id ) { return $prepared_post; } // 新規作成はロック対象外
 
@@ -308,6 +347,22 @@ if ( ! function_exists( 'edlk_rest_pre_insert_gate' ) ) {
 /*-------------------------------------------*/
 if ( ! function_exists( 'edlk_release_after_save' ) ) {
 	function edlk_release_after_save( $post_id ) {
+		// 自動保存とリビジョンは「編集の終了」ではないため、ロックは保持したままにする。
+		// この除外を外すと、素通しさせた自動保存がロックを消す。
+		if ( edlk_is_autosave_request() ) { return; }
+		// 保険。save_post はリビジョンでも撃たれるが $post_id はリビジョンの ID なので
+		// release() は何も消さない。空ガードと読まれないよう意図を残す。
+		if ( wp_is_post_revision( $post_id ) ) { return; }
+
+		/*
+		 * REST（ブロックエディタ）の明示保存では解放しない。保存してもタブは開いたままで編集が続き、
+		 * Heartbeat が TTL を延長し続ける。解放は離脱時の sendBeacon と TTL が受け持つ。
+		 * ここで解放すると「保存した瞬間から無保護」になる。クライアントから取り直す案は、
+		 * 解放と再取得の間に他セッションが割り込める窓を作るので採らない。
+		 * 解放してよいのはクラシックのフル保存だけで、そちらは保存後にページが遷移する。
+		 */
+		if ( defined( 'REST_REQUEST' ) && REST_REQUEST ) { return; }
+
 		$session_id = edlk_current_session_id();
 		if ( '' !== $session_id ) {
 			Edlk_Lock_Manager::release( $post_id, $session_id );
