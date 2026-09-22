@@ -97,6 +97,7 @@ Yes, deliberately. If the same account opens the same post in a second tab, wind
 * Fixed: the predecessor plugin (EditLock) is now detected even when its folder has been renamed.
 * Changed: when a second tab of the same account blocks a save, the message now says so and what to do. It also appears when the second tab opens.
 * Changed: the save-blocked dialog is reworded and has an accessible name.
+* Fixed: in the Classic Editor, "Publish" on a draft now actually publishes it. It used to save the post as a draft while reporting that the post had been updated.
 * Fixed: Quick Edit now shows the reason when a save is blocked, instead of leaving the spinner running.
 * Changed: the Classic Editor's "Take over" button is hidden while another account holds this plugin's lock.
 * Changed: lock ownership is now determined more strictly.

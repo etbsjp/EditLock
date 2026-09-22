@@ -344,7 +344,40 @@
 
 		classicForm.addEventListener( 'submit', function( e ) {
 			e.preventDefault();
+
+			/*
+			 * HTMLFormElement.submit() has no submitter, so the pressed button's name and value never
+			 * reach $_POST. Core reads $_POST['publish'] both to move a draft to "publish"
+			 * (_wp_translate_postdata) and to pick the admin notice, so without carrying it over a
+			 * draft's "Publish" saves as a draft AND still reports "Post updated." -- the user has no
+			 * way to notice. Take the submitter and re-add it as a hidden field.
+			 * HTMLFormElement.submit() は submitter を持たないため、押されたボタンの name/value が
+			 * $_POST に乗らない。コアは $_POST['publish'] を見て下書きを公開へ移し
+			 * （_wp_translate_postdata）、管理画面のメッセージもこれで選ぶので、引き継がないと
+			 * 下書きの「公開」が下書きのまま保存されたうえ「投稿を更新しました。」と出る。
+			 * 利用者には気づく手段が無い。submitter を hidden として付け直す。
+			 */
+			var submitter = e.submitter;
+			if ( ! submitter ) {
+				// Older browsers have no e.submitter. Only accept a focused element that really is a
+				// submit control, so that pressing Enter in a text field does not duplicate its value.
+				// 古いブラウザには e.submitter が無い。テキスト欄で Enter を押したときにその値を
+				// 二重に送らないよう、フォーカスされている要素が送信コントロールのときだけ採る。
+				var active = document.activeElement;
+				if ( active && classicForm.contains( active ) &&
+					( 'submit' === active.type || 'BUTTON' === active.tagName ) ) {
+					submitter = active;
+				}
+			}
+
 			attempt( function() {
+				if ( submitter && submitter.name ) {
+					var carried   = document.createElement( 'input' );
+					carried.type  = 'hidden';
+					carried.name  = submitter.name;
+					carried.value = submitter.value;
+					classicForm.appendChild( carried );
+				}
 				isSubmitting = true;
 				// submit() does not fire the submit event again, so the gate is not re-entered.
 				// submit()経由はsubmitイベントを再発火しないためガードを再帰しない
