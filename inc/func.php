@@ -629,14 +629,28 @@ if ( ! function_exists( 'edlk_pre_post_update_gate' ) ) {
 		}
 
 		/*
-		 * Autosave is not the end of an editing session, and WordPress core already keeps another
-		 * user's autosave away from the parent post (it stores a per-user revision instead), so
-		 * there is nothing for this gate to protect here. Blocking it only breaks the author's own
-		 * autosave, silently: wp_autosave() does not send the session id, so the gate cannot tell
-		 * the lock holder's own tab from anyone else's.
-		 * 自動保存は「編集の終了」ではなく、他ユーザーの自動保存はコア側が親投稿に触れさせない
-		 * （ユーザーごとのリビジョンに回す）ため、このゲートで守るものが無い。止めると本人の自動保存を
-		 * 黙って壊すだけになる（wp_autosave() はセッション ID を送らないため、保持者本人のタブを見分けられない）。
+		 * Autosave is not the end of an editing session, and WordPress core usually keeps an autosave
+		 * away from the parent post (it stores a per-user revision instead), so there is little for
+		 * this gate to protect here. Blocking it only breaks the author's own autosave, silently:
+		 * wp_autosave() does not send the session id, so the gate cannot tell the lock holder's own
+		 * tab from anyone else's.
+		 * 自動保存は「編集の終了」ではなく、自動保存はコア側が通常は親投稿に触れさせない
+		 * （ユーザーごとのリビジョンに回す）ため、このゲートで守るものはほとんど無い。止めると本人の
+		 * 自動保存を黙って壊すだけになる（wp_autosave() はセッション ID を送らないため、保持者本人の
+		 * タブを見分けられない）。
+		 *
+		 * ★ What core does NOT keep away: a draft's own author autosaving that draft. wp_autosave()
+		 * and WP_REST_Autosaves_Controller::create_item() both update the parent post directly when
+		 * the post is a draft and the person autosaving is its author. WordPress 7.0 and later
+		 * narrows that by checking its own edit lock first ($post_lock_is_active); 6.9.x and earlier
+		 * have no such check, and this plugin declares no "Requires at least". So when the lock
+		 * holder and the draft's author are different people, this is a range we do not cover.
+		 * ★ コアが止めてくれない場合: 下書きの投稿者本人がその下書きを自動保存するとき。
+		 * wp_autosave() も WP_REST_Autosaves_Controller::create_item() も、投稿が下書きで、かつ
+		 * 自動保存する人がその投稿者本人なら、親投稿を直接更新する。WordPress 7.0 以降は本体側の
+		 * 編集ロック（$post_lock_is_active）を先に見て範囲を狭めるが、6.9.x 以前はその判定を持たず、
+		 * このプラグインは Requires at least を宣言していない。
+		 * → ロック保持者と下書きの投稿者が別人のとき、ここは守れない範囲として残る。
 		 */
 		if ( edlk_is_autosave_request() ) {
 			return;
