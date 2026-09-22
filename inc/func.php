@@ -515,11 +515,11 @@ if ( ! function_exists( 'edlk_get_lock_status_payload' ) ) {
 	 * @return array Payload for wp_send_json_success().
 	 */
 	function edlk_get_lock_status_payload( $status, $session_id ) {
-		// An empty session ID is never the holder: hash_equals( '', '' ) is true, so without this
-		// the caller would be told the post is unlocked whenever a row's session_id is empty.
-		// See Etbs_Ecg_Lock_Manager::is_holder(), which guards the same way.
-		// 空のセッション ID は保持者ではない。hash_equals( '', '' ) は true なので、この条件が無いと
-		// session_id が空の行があるときに「ロックされていない」と返してしまう。
+		// An empty session ID is never the holder: hash_equals( '', '' ) is true, so without this a
+		// caller whose own session ID is empty would be told the post is unlocked whenever the row's
+		// session_id is empty too. See Etbs_Ecg_Lock_Manager::is_holder(), which guards the same way.
+		// 空のセッション ID は保持者ではない。hash_equals( '', '' ) は true なので、この条件が無いと、
+		// 呼び出し元のセッション ID も空である場合に「ロックされていない」と返してしまう。
 		// 同じ守り方を Etbs_Ecg_Lock_Manager::is_holder() でもしている。
 		if ( ! $status || ( '' !== (string) $session_id && hash_equals( $status['session_id'], (string) $session_id ) ) ) {
 			return array( 'locked' => false );
@@ -667,6 +667,10 @@ if ( ! function_exists( 'edlk_pre_post_update_gate' ) ) {
 		 * そのどちらかに POST するフロントフォーム（大半はこの作り）は従来どおりこのゲートを通る。
 		 * wp_doing_ajax() で広げる案は採れない。クイック編集は admin-ajax.php の inline-save であり、
 		 * 素通しにすると同じ版で直したクイック編集の修正を自分で無効にする。
+		 * ★ ただし ! is_user_logged_in() があるので、wp_ajax_nopriv_* 経由の未ログインの POST は
+		 * admin-ajax.php であっても素通しになる。「admin-ajax.php なら必ず効く」ではない。
+		 * ★ Note that ! is_user_logged_in() still lets an unauthenticated POST through wp_ajax_nopriv_*
+		 * pass, even on admin-ajax.php. "admin-ajax.php is always covered" would not be true.
 		 *
 		 * The trade-off: on those paths the lock no longer holds. Bulk edit is still stopped as before.
 		 * トレードオフ: これらの経路ではロックが効かなくなる。一括編集は従来どおり中断する。
@@ -890,6 +894,7 @@ if ( ! function_exists( 'edlk_pre_trash_post_gate' ) ) {
 		 * 形の違う穴がもう1つ増えるだけになる。ゴミ箱ガードは既定 OFF のオプトインで、
 		 * この挙動は 1.1.1 から変わっていない。
 		 */
+
 		if ( ! edlk_is_post_type_enabled( $post->post_type ) ) {
 			return $check;
 		}

@@ -164,8 +164,8 @@ msgid "Saves that run without WP_ADMIN defined, such as WP-Cron, WP-CLI, XML-RPC
 msgstr "WP-Cron・WP-CLI・XML-RPC や、フロント側のコードが wp_update_post() を直接呼ぶ場合など、WP_ADMIN が定義されない経路で実行される保存はブロックされません。"
 
 #: inc/class-etbs-ecg-settings-page.php:266
-msgid "Front-end forms that post to admin-post.php or admin-ajax.php are still blocked, because WordPress defines WP_ADMIN there."
-msgstr "admin-post.php や admin-ajax.php に POST するフロント側のフォームは、WordPress がそこで WP_ADMIN を定義するため、引き続きブロックされます。"
+msgid "Front-end forms that post to admin-post.php or admin-ajax.php are still blocked while the sender is logged in, because WordPress defines WP_ADMIN there."
+msgstr "admin-post.php や admin-ajax.php に POST するフロント側のフォームは、WordPress がそこで WP_ADMIN を定義するため、送信者がログインしている限り引き続きブロックされます。"
 
 #: inc/class-etbs-ecg-settings-page.php:267
 msgid "Trash blocking, when \"Also lock trash actions\" is enabled, works for processing that goes through wp_trash_post(), or DELETE requests to the REST API."
