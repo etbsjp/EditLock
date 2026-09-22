@@ -110,6 +110,31 @@ if ( ! function_exists( 'edlk_current_session_id' ) ) {
 }
 
 /*-------------------------------------------*/
+/* 自動保存かどうかの判定（クラシック経路・REST 経路の両方から使う）
+/*-------------------------------------------*/
+if ( ! function_exists( 'edlk_is_autosave_request' ) ) {
+	/**
+	 * 現在の保存が自動保存かどうかを返す。
+	 *
+	 * DOING_AUTOSAVE だけに頼らない。WP_REST_Autosaves_Controller::create_item() は
+	 * WP_RUN_CORE_TESTS が定義されているとこの定数を立てないため、テストスイート上で
+	 * 判定がすり抜ける。REST のときはルート末尾も見る。
+	 *
+	 * @param WP_REST_Request|null $request 判定対象の REST リクエスト。REST 以外では null。
+	 * @return bool 自動保存なら true。
+	 */
+	function edlk_is_autosave_request( $request = null ) {
+		if ( defined( 'DOING_AUTOSAVE' ) && DOING_AUTOSAVE ) {
+			return true;
+		}
+		if ( $request instanceof WP_REST_Request ) {
+			return 1 === preg_match( '#/autosaves$#', (string) $request->get_route() );
+		}
+		return false;
+	}
+}
+
+/*-------------------------------------------*/
 /* 編集画面へのスクリプト読み込み
 /*-------------------------------------------*/
 if ( ! function_exists( 'edlk_enqueue_editor_script' ) ) {
@@ -235,28 +260,6 @@ if ( ! function_exists( 'edlk_heartbeat_received' ) ) {
 /* REST経由の更新も内部的に wp_insert_post() を呼ぶためここを通過するが、REST側は
 /* rest_pre_insert_gate() で既に判定済み（$_POSTにセッションIDが乗らないため二重判定を避ける）。
 /*-------------------------------------------*/
-if ( ! function_exists( 'edlk_is_autosave_request' ) ) {
-	/**
-	 * 現在の保存が自動保存かどうかを返す。
-	 *
-	 * DOING_AUTOSAVE だけに頼らない。WP_REST_Autosaves_Controller::create_item() は
-	 * WP_RUN_CORE_TESTS が定義されているとこの定数を立てないため、テストスイート上で
-	 * 判定がすり抜ける。REST のときはルート末尾も見る。
-	 *
-	 * @param WP_REST_Request|null $request 判定対象の REST リクエスト。REST 以外では null。
-	 * @return bool 自動保存なら true。
-	 */
-	function edlk_is_autosave_request( $request = null ) {
-		if ( defined( 'DOING_AUTOSAVE' ) && DOING_AUTOSAVE ) {
-			return true;
-		}
-		if ( $request instanceof WP_REST_Request ) {
-			return 1 === preg_match( '#/autosaves$#', (string) $request->get_route() );
-		}
-		return false;
-	}
-}
-
 if ( ! function_exists( 'edlk_pre_post_update_gate' ) ) {
 	function edlk_pre_post_update_gate( $post_id, $data ) {
 		if ( defined( 'REST_REQUEST' ) && REST_REQUEST ) { return; }
@@ -320,6 +323,8 @@ if ( ! function_exists( 'edlk_rest_pre_insert_gate' ) ) {
 		if ( ! $post_id ) { return $prepared_post; } // 新規作成はロック対象外
 
 		$session_id = sanitize_text_field( (string) $request->get_header( 'x_editlock_session' ) );
+		// REST の保存では解放に使わなくなったが（edlk_release_after_save() 参照）、
+		// 将来その分岐を戻したときに黙って壊れないよう呼び出しは残す.
 		edlk_current_session_id( $session_id );
 
 		if ( '' !== $session_id && Edlk_Lock_Manager::is_holder( $post_id, $session_id ) ) {
