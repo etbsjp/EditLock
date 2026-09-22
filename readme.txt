@@ -48,7 +48,7 @@ Edit Conflict Guard is intentionally strict and, as a result, has a few rough ed
 5. **Locks apply to the holder too.** By design, even the account that holds the lock is blocked from saving the same post from a second tab, window or device. This is deliberate, not a bug. The plugin can tell the lock is held by the same account, but a matching account does not prove it is the same person (accounts are sometimes shared), so both are treated the same way. The message says "the same account" for that reason.
 6. **Autosave is not blocked, so the same account can overwrite itself.** WordPress core keeps another user's autosave away from the post itself by storing it as a separate revision. When one account has the same draft open in two tabs, however, both tabs' autosaves can overwrite the draft in turn. The notice shown when the second tab opens is the warning.
 7. **Block Editor "Take over" button.** WordPress's own "Take over" button in the Block Editor cannot be removed by a plugin. Taking over moves WordPress's lock but not this plugin's, so saving stays blocked until the other editor closes their screen or an administrator force-releases the lock.
-8. **Saves outside the admin screens are not blocked.** Front-end forms, WP-Cron, WP-CLI and XML-RPC are let through, because they cannot show a message and would otherwise fail on visitors' screens. Saves through the REST API and the admin screens (including Quick Edit and bulk edit) are still checked.
+8. **Saves made without WP_ADMIN defined are not blocked.** WP-Cron, WP-CLI, XML-RPC and front-end code that calls `wp_update_post()` directly are let through, because they cannot show a message and would otherwise fail on visitors' screens. Note that `admin-post.php` and `admin-ajax.php` define `WP_ADMIN` themselves, so a front-end form that posts to either one is still blocked. Saves through the REST API and the admin screens (including Quick Edit and bulk edit) are still checked.
 
 == Installation ==
 
@@ -93,11 +93,13 @@ Yes, deliberately. If the same account opens the same post in a second tab, wind
 * Fixed: saving in the Block Editor no longer leaves the post unprotected for the rest of the editing session.
 * Fixed: the Classic Editor's autosave no longer fails silently while you hold the lock.
 * Fixed: the Block Editor's autosave no longer reports success without saving anything.
-* Fixed: saves made outside the admin screens (front-end forms, WP-Cron, WP-CLI) are no longer stopped with an error screen.
+* Fixed: saves made where no message can be shown (WP-Cron, WP-CLI, XML-RPC, and front-end code calling wp_update_post() directly) are no longer stopped with an error screen.
 * Fixed: the predecessor plugin (EditLock) is now detected even when its folder has been renamed.
 * Changed: when a second tab of the same account blocks a save, the message now says so and what to do. It also appears when the second tab opens.
 * Changed: the save-blocked dialog is reworded and has an accessible name.
+* Fixed: Quick Edit now shows the reason when a save is blocked, instead of leaving the spinner running.
 * Changed: the Classic Editor's "Take over" button is hidden while another account holds this plugin's lock.
+* Changed: lock ownership is now determined more strictly.
 
 = 1.1.1 =
 * Added a bundled Japanese translation. Translations delivered by translate.wordpress.org still take precedence once they are available.

@@ -645,7 +645,6 @@ class Test_Etbs_Ecg_Func extends Etbs_Ecg_Test_Case {
 	 */
 	public function test_edlk_filter_override_post_lock() {
 		$post  = get_post( $this->post_id );
-		$other = get_userdata( $this->other );
 
 		$test_cases = array(
 			array(

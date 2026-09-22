@@ -364,9 +364,17 @@
 		e.stopImmediatePropagation();
 
 		attempt( function() {
-			el.setAttribute( 'data-edlk-bypass', '1' );
-			el.click();
-			el.removeAttribute( 'data-edlk-bypass' );
+			// The modal's "Save again" can come back long after the click, and the block editor may have
+			// re-mounted the button by then. A detached element's click() does nothing and throws nothing,
+			// so look the button up again when the one we captured is no longer in the document.
+			// モーダルの「もう一度保存」は最初のクリックからかなり後に返ってくることがあり、その間に
+			// ブロックエディタがボタンを作り直していることがある。DOM から切り離された要素の click() は
+			// 何も起きず例外も出ないため、捕まえた要素が文書内に無ければ引き直す。
+			var target = document.body.contains( el ) ? el : document.querySelector( GUARD_SELECTOR );
+			if ( ! target ) { return; }
+			target.setAttribute( 'data-edlk-bypass', '1' );
+			target.click();
+			target.removeAttribute( 'data-edlk-bypass' );
 		} );
 	}, true );
 

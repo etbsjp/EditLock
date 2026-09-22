@@ -515,7 +515,13 @@ if ( ! function_exists( 'edlk_get_lock_status_payload' ) ) {
 	 * @return array Payload for wp_send_json_success().
 	 */
 	function edlk_get_lock_status_payload( $status, $session_id ) {
-		if ( ! $status || hash_equals( $status['session_id'], (string) $session_id ) ) {
+		// An empty session ID is never the holder: hash_equals( '', '' ) is true, so without this
+		// the caller would be told the post is unlocked whenever a row's session_id is empty.
+		// See Etbs_Ecg_Lock_Manager::is_holder(), which guards the same way.
+		// 空のセッション ID は保持者ではない。hash_equals( '', '' ) は true なので、この条件が無いと
+		// session_id が空の行があるときに「ロックされていない」と返してしまう。
+		// 同じ守り方を Etbs_Ecg_Lock_Manager::is_holder() でもしている。
+		if ( ! $status || ( '' !== (string) $session_id && hash_equals( $status['session_id'], (string) $session_id ) ) ) {
 			return array( 'locked' => false );
 		}
 
@@ -644,14 +650,23 @@ if ( ! function_exists( 'edlk_pre_post_update_gate' ) ) {
 		 * 実際に効いているのは ! is_admin()（cron も WP-CLI も WP_ADMIN を定義しない）。
 		 * 残る3つは意図を明示するために書いている。
 		 *
-		 * What happens if it stops there: for a post type that is updated from the front end through
-		 * wp_update_post() (a member form, a legacy WooCommerce order -- every post type with show_ui
-		 * is covered by default), a visitor's page would die with a 409 wp_die() just because someone
-		 * has that post open in the admin. Those paths have neither a session id nor a way to retry.
-		 * 止めると何が起きるか: フロントから wp_update_post() を呼ぶ投稿タイプ
-		 * （会員フォーム・WooCommerce のレガシー注文など、show_ui な投稿タイプは既定で全て対象）で、
+		 * What happens if it stops there: code that calls wp_update_post() from a front-end template
+		 * would make a visitor's page die with a 409 wp_die() just because someone has that post open
+		 * in the admin. Such a path has neither a session id nor a way to retry.
+		 * 止めると何が起きるか: フロントのテンプレートから wp_update_post() を呼ぶコードで、
 		 * 管理画面の誰かがその投稿を開いているだけで訪問者の画面が 409 の wp_die() で落ちる。
-		 * これらの経路にはセッション ID も、やり直しの導線も無い。
+		 * その経路にはセッション ID も、やり直しの導線も無い。
+		 *
+		 * ★ How far this reaches, exactly: only paths that do not define WP_ADMIN. wp-admin/admin-post.php
+		 * and wp-admin/admin-ajax.php both define it themselves, so a front-end form that posts to either
+		 * one -- which is how most of them are built -- still goes through this gate. Widening the
+		 * condition with wp_doing_ajax() is not an option: Quick Edit is admin-ajax.php's inline-save,
+		 * and letting it through would undo the Quick Edit fix in this same release.
+		 * ★ どこまで効くかの正確な範囲: 素通しになるのは WP_ADMIN を定義しない経路だけ。
+		 * wp-admin/admin-post.php と wp-admin/admin-ajax.php は自分で WP_ADMIN を定義するので、
+		 * そのどちらかに POST するフロントフォーム（大半はこの作り）は従来どおりこのゲートを通る。
+		 * wp_doing_ajax() で広げる案は採れない。クイック編集は admin-ajax.php の inline-save であり、
+		 * 素通しにすると同じ版で直したクイック編集の修正を自分で無効にする。
 		 *
 		 * The trade-off: on those paths the lock no longer holds. Bulk edit is still stopped as before.
 		 * トレードオフ: これらの経路ではロックが効かなくなる。一括編集は従来どおり中断する。
@@ -862,6 +877,19 @@ if ( ! function_exists( 'edlk_pre_trash_post_gate' ) ) {
 		if ( defined( 'REST_REQUEST' ) && REST_REQUEST ) {
 			return $check; // REST側は rest_pre_dispatch で処理.
 		}
+
+		/*
+		 * This gate deliberately does NOT carry the "no human-readable screen" exemption that
+		 * edlk_pre_post_update_gate() has (! is_admin() / cron / WP-CLI / XML-RPC). That exemption turned
+		 * out to reach only paths that do not define WP_ADMIN, so mirroring it here would add a second,
+		 * differently-shaped hole rather than make the two gates symmetrical. The trash guard is also
+		 * opt-in and off by default, and this behaviour is unchanged from 1.1.1.
+		 * このゲートには、edlk_pre_post_update_gate() が持つ「人が読める画面を返せない経路では止めない」
+		 * 分岐（! is_admin() / cron / WP-CLI / XML-RPC）を意図的に入れていない。あの分岐が実際に届くのは
+		 * WP_ADMIN を定義しない経路だけと分かったため、ここへ写しても2つのゲートが揃うのではなく、
+		 * 形の違う穴がもう1つ増えるだけになる。ゴミ箱ガードは既定 OFF のオプトインで、
+		 * この挙動は 1.1.1 から変わっていない。
+		 */
 		if ( ! edlk_is_post_type_enabled( $post->post_type ) ) {
 			return $check;
 		}
@@ -982,6 +1010,7 @@ if ( ! function_exists( 'edlk_rest_pre_dispatch_trash_gate' ) ) {
 if ( ! function_exists( 'edlk_filter_override_post_lock' ) ) {
 	/**
 	 * Removes core's "take over" button while another account holds a lock of this plugin.
+	 * このプラグインのロックを別アカウントが持っている間、コアの「引き継ぐ」ボタンを消す。
 	 *
 	 * @param bool    $override Whether to allow the post lock to be overridden.
 	 * @param WP_Post $post     Post object.
@@ -999,6 +1028,7 @@ if ( ! function_exists( 'edlk_filter_override_post_lock' ) ) {
 if ( ! function_exists( 'edlk_render_post_locked_dialog_notice' ) ) {
 	/**
 	 * Adds one line to core's post-locked dialog saying that this plugin protects the post.
+	 * コアのロックダイアログに、この投稿をこのプラグインが守っている旨の1行を足す。
 	 *
 	 * @param WP_Post $post Post object.
 	 * @param WP_User $user The user with core's lock for the post.

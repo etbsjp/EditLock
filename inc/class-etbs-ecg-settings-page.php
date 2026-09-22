@@ -262,7 +262,8 @@ class Etbs_Ecg_Settings_Page {
 			<p class="edlk-footnote edlk-footnote--spaced">
 				<strong><?php esc_html_e( 'For Developers', 'etbs-edit-conflict-guard' ); ?></strong><br>
 				<?php esc_html_e( 'Save blocking works for saves made from the admin screens (the edit screen, Quick Edit and bulk edit) and for REST API requests.', 'etbs-edit-conflict-guard' ); ?><br>
-				<?php esc_html_e( 'Saves that run outside the admin screens, such as front-end forms, WP-Cron, WP-CLI and XML-RPC, are not blocked.', 'etbs-edit-conflict-guard' ); ?><br>
+				<?php esc_html_e( 'Saves that run without WP_ADMIN defined, such as WP-Cron, WP-CLI, XML-RPC and front-end code that calls wp_update_post() directly, are not blocked.', 'etbs-edit-conflict-guard' ); ?><br>
+				<?php esc_html_e( 'Front-end forms that post to admin-post.php or admin-ajax.php are still blocked, because WordPress defines WP_ADMIN there.', 'etbs-edit-conflict-guard' ); ?><br>
 				<?php esc_html_e( 'Trash blocking, when "Also lock trash actions" is enabled, works for processing that goes through wp_trash_post(), or DELETE requests to the REST API.', 'etbs-edit-conflict-guard' ); ?><br>
 				<?php esc_html_e( 'Neither applies to plugins or custom code that writes to the database directly, such as via $wpdb->update().', 'etbs-edit-conflict-guard' ); ?><br>
 			</p>
