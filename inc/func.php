@@ -550,10 +550,24 @@ if ( ! function_exists( 'edlk_heartbeat_received' ) ) {
 	 * "Lost" is reported only when another session now holds the lock. When the row has simply
 	 * expired or was force-released there is nothing to report (status() returns null), and that is
 	 * intended: no other screen took over, so the notice's wording ("another edit screen has taken
-	 * over") would be false, and the next save re-acquires the lock on its own.
+	 * over") would be false.
 	 * 「失った」を返すのは、別のセッションが現にロックを握っているときだけ。行が期限切れで消えた場合や
 	 * 強制解除された場合は返すものが無く（status() が null）、それでよい。別の画面が奪ったわけではないので
-	 * 通知の文言（「別の編集画面が取得しました」）が偽になるうえ、次の保存で自動的に取り直されるため。
+	 * 通知の文言（「別の編集画面が取得しました」）が偽になるため。
+	 *
+	 * Known gap: renew() never re-creates a missing row, and this filter does not either, so a screen
+	 * whose lock expired (Heartbeat stopped for longer than the TTL, e.g. the machine slept) stays
+	 * unprotected and is told nothing. A save made through the Save/Update/Publish button re-acquires
+	 * the lock, because the client calls acquire() before every such save; a save sent straight to the
+	 * REST API (Cmd+S, or the pre-publish panel) does not, because edlk_rest_pre_insert_gate() only
+	 * checks and never acquires. Re-acquiring from here was rejected: it would silently resurrect a
+	 * lock an administrator had just force-released from the settings screen.
+	 * 既知の穴: renew() は消えた行を作り直さず、このフィルタも作り直さない。そのため、ロックが期限切れした
+	 * 画面（TTL を超えて Heartbeat が止まった場合。端末のスリープなど）は無保護のまま、何も知らされない。
+	 * 保存ボタン（保存・更新・公開）経由の保存は、クライアントが毎回 acquire() を撃つので取り直される。
+	 * REST へ直接行く保存（Cmd+S・公開前パネル）は取り直されない。edlk_rest_pre_insert_gate() は判定するだけで
+	 * 取得しないため。ここで取り直す案は採らない。管理者が設定画面から強制解除したばかりのロックを、
+	 * 黙って復活させてしまうため。
 	 *
 	 * @param array $response Heartbeat response data.
 	 * @param array $data     Heartbeat request data sent by the client.
