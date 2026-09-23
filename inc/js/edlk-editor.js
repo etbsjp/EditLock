@@ -164,6 +164,17 @@
 		// showModal() on an open dialog throws InvalidStateError (a rapid double click on a save button does this).
 		// 開いているダイアログへの showModal() は InvalidStateError を投げる（保存ボタンの連打で起きる）。
 		if ( ! d.open ) { d.showModal(); }
+
+		/*
+		 * showModal() focuses the first focusable descendant, which is the administrator's
+		 * force-release link when that line is shown. Focusing an informational link rather than an
+		 * action is unexpected for a keyboard user, and the focus ring wraps awkwardly across the
+		 * link's two lines. Put the focus on the primary action instead.
+		 * showModal() は最初のフォーカス可能な子要素にフォーカスするので、管理者向けの強制解除リンクが
+		 * 出ているときはそれが当たる。操作ではなく説明のリンクにフォーカスが行くのはキーボード利用者に
+		 * とって予想外で、2行にまたがるリンクのフォーカスリングも収まりが悪い。主操作に寄せる。
+		 */
+		if ( retry && 'function' === typeof retry.focus ) { retry.focus(); }
 	}
 
 	/**
