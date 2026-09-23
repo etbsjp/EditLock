@@ -94,7 +94,7 @@
 		dialog.appendChild( inner );
 		document.body.appendChild( dialog );
 
-		dialogParts = { title: title, body: body, admin: admin };
+		dialogParts = { title: title, body: body, admin: admin, retryButton: retry };
 		return dialog;
 	}
 
@@ -166,15 +166,21 @@
 		if ( ! d.open ) { d.showModal(); }
 
 		/*
-		 * showModal() focuses the first focusable descendant, which is the administrator's
-		 * force-release link when that line is shown. Focusing an informational link rather than an
-		 * action is unexpected for a keyboard user, and the focus ring wraps awkwardly across the
-		 * link's two lines. Put the focus on the primary action instead.
-		 * showModal() は最初のフォーカス可能な子要素にフォーカスするので、管理者向けの強制解除リンクが
-		 * 出ているときはそれが当たる。操作ではなく説明のリンクにフォーカスが行くのはキーボード利用者に
-		 * とって予想外で、2行にまたがるリンクのフォーカスリングも収まりが悪い。主操作に寄せる。
+		 * showModal() focuses the first focusable descendant. In this dialog the DOM order is
+		 * administrator link -> Close -> Save again, so the focus lands on an informational link
+		 * rather than an action, which is unexpected for a keyboard user, and its focus ring wraps
+		 * awkwardly across the link's two lines. Put the focus on the primary action instead.
+		 * NOTE: the `retry` parameter of this function is the callback, NOT the button. The button
+		 * lives in buildDialog() and is handed over through dialogParts.retryButton.
+		 * showModal() は最初のフォーカス可能な子要素にフォーカスする。このダイアログの DOM 順は
+		 * 管理者リンク → Close → もう一度保存 なので、操作ではなく説明のリンクにフォーカスが当たる。
+		 * キーボード利用者にとって予想外で、2行にまたがるリンクのフォーカスリングも収まりが悪い。
+		 * 主操作に寄せる。
+		 * ★ この関数の引数 `retry` は**コールバック**であってボタンではない。ボタンは buildDialog() の
+		 * 中にあり、dialogParts.retryButton 経由で受け取る。ここを取り違えると、typeof ガードに
+		 * 阻まれて無言で何も起きない（実機で発覚した）。
 		 */
-		if ( retry && 'function' === typeof retry.focus ) { retry.focus(); }
+		dialogParts.retryButton.focus();
 	}
 
 	/**
