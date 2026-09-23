@@ -173,11 +173,11 @@ class Etbs_Ecg_Settings_Page {
 			<div class="edlk-intro">
 				<p>
 					<?php esc_html_e( 'Edit Conflict Guard reliably blocks other users from saving while someone already has a post open for editing.', 'etbs-edit-conflict-guard' ); ?>
-					<?php esc_html_e( 'It keeps the standard WordPress "currently editing" notice as-is, and only prevents the actual save conflict.', 'etbs-edit-conflict-guard' ); ?>
+					<?php esc_html_e( 'It keeps the standard WordPress "currently editing" notice, and only prevents the actual save conflict.', 'etbs-edit-conflict-guard' ); ?>
 				</p>
 				<p>
 					<?php esc_html_e( 'The block check happens the moment you click the Save, Update, or Publish button.', 'etbs-edit-conflict-guard' ); ?>
-					<?php esc_html_e( 'Nothing is shown just from opening the edit screen.', 'etbs-edit-conflict-guard' ); ?>
+					<?php esc_html_e( 'Opening the edit screen shows a notice only when the same account already has the post open in another edit screen.', 'etbs-edit-conflict-guard' ); ?>
 				</p>
 			</div>
 
@@ -261,7 +261,10 @@ class Etbs_Ecg_Settings_Page {
 
 			<p class="edlk-footnote edlk-footnote--spaced">
 				<strong><?php esc_html_e( 'For Developers', 'etbs-edit-conflict-guard' ); ?></strong><br>
-				<?php esc_html_e( 'Save blocking works for any update that goes through wp_insert_post() / wp_update_post(), regardless of the caller (admin screen, front-end form, other plugins, REST API, etc.).', 'etbs-edit-conflict-guard' ); ?><br>
+				<?php esc_html_e( 'Save blocking works for saves made from the admin screens (the edit screen, Quick Edit and bulk edit) and for REST API requests.', 'etbs-edit-conflict-guard' ); ?><br>
+				<?php esc_html_e( 'Autosaves are never blocked, in either editor.', 'etbs-edit-conflict-guard' ); ?><br>
+				<?php esc_html_e( 'Saves that run without WP_ADMIN defined, such as WP-Cron, WP-CLI, XML-RPC and front-end code that calls wp_update_post() directly, are not blocked.', 'etbs-edit-conflict-guard' ); ?><br>
+				<?php esc_html_e( 'Front-end forms that post to admin-post.php or admin-ajax.php are still blocked while the sender is logged in, because WordPress defines WP_ADMIN there.', 'etbs-edit-conflict-guard' ); ?><br>
 				<?php esc_html_e( 'Trash blocking, when "Also lock trash actions" is enabled, works for processing that goes through wp_trash_post(), or DELETE requests to the REST API.', 'etbs-edit-conflict-guard' ); ?><br>
 				<?php esc_html_e( 'Neither applies to plugins or custom code that writes to the database directly, such as via $wpdb->update().', 'etbs-edit-conflict-guard' ); ?><br>
 			</p>

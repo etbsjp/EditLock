@@ -61,6 +61,12 @@ class Etbs_Ecg_Lock_Manager {
 		global $wpdb;
 		$table = self::table_name();
 
+		// Never write a row with an empty session ID: it would be readable as "held by anyone".
+		// 空のセッション ID の行は書かない。「誰でも保持者」と読める行になってしまう.
+		if ( '' === (string) $session_id ) {
+			return self::status( $post_id );
+		}
+
 		// post_id に対して session_id でロックの取得を試みる.
 		// 既存ロックが期限切れ、または同一 session_id の場合のみ上書きする単一UPSERT文で
 		// InnoDBの行ロックにより競合を解消するため、この関数はアトミック.
@@ -96,6 +102,12 @@ class Etbs_Ecg_Lock_Manager {
 		global $wpdb;
 		$table = self::table_name();
 
+		// An empty session ID holds nothing, so there is nothing to renew.
+		// 空のセッション ID は何も保持していないので、延長するものが無い.
+		if ( '' === (string) $session_id ) {
+			return false;
+		}
+
 		// 現在保持している session_id を条件に TTL を延長する(Heartbeatからの呼び出し用).
 		// 既に他セッションに奪われている場合は延長せず false を返す.
 		$wpdb->query(
@@ -124,6 +136,12 @@ class Etbs_Ecg_Lock_Manager {
 	public static function release( $post_id, $session_id ) {
 		global $wpdb;
 		$table = self::table_name();
+
+		// An empty session ID identifies nobody. Never let it match a row (see is_holder()).
+		// 空のセッション ID は誰も指さない。行に一致させない（is_holder() 参照）.
+		if ( '' === (string) $session_id ) {
+			return;
+		}
 
 		$wpdb->query(
 			$wpdb->prepare(
@@ -186,6 +204,14 @@ class Etbs_Ecg_Lock_Manager {
 	 * @return bool True if $session_id currently holds the lock.
 	 */
 	public static function is_holder( $post_id, $session_id ) {
+		// hash_equals( '', '' ) is true, so a row whose session_id is '' would make every caller
+		// without a session ID its holder. An empty session ID is never a holder.
+		// hash_equals( '', '' ) は true なので、session_id が '' の行が1行でもあると、セッション ID を
+		// 持たない呼び出し元の誰もが保持者になってしまう。空のセッション ID は保持者ではない.
+		if ( '' === (string) $session_id ) {
+			return false;
+		}
+
 		$status = self::status( $post_id );
 		return $status && hash_equals( $status['session_id'], (string) $session_id );
 	}

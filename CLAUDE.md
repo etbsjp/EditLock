@@ -96,6 +96,51 @@ phpcs --standard=WordPress-Docs --sniffs=Squiz.Commenting.FunctionComment $(git 
   この警告の前提（「wp.org がホストするなら言語パックが届くので手動で呼ぶ必要はない」）は、
   **同梱ファイルを持つこのプラグインには当てはまらない**
 
+### ★★ PHPUnit（1.2.0 で新設。`tests/`）
+
+CI は入れない（決定事項）。**その代わり、誰がいつ走らせるかをここで決める。** 一度も走らないテストは無いのと同じ。
+
+| いつ | 誰が |
+|---|---|
+| **リリース前チェックの1項目**（`readme.txt` の `Stable tag` を揃える前） | 人（または大の監査で依頼された作業エージェント）。結果の生出力を PR かコメントに貼る |
+| `inc/` の PHP を変える実装 PR | 実装した人。緑であることと、陽性対照が効いていること（下記）を PR に書く |
+
+★★★ **WordPress テストスイートは、接続先 DB のテーブルを削除して作り直す。** 実サイトの DB（Local の `local`）に向けると
+サイトが消える。**必ず使い捨ての DB を指すこと。** `tests/` にも DB の設定は置かない（リポジトリに入れない）。
+
+環境はリポジトリの**外**に作る（`composer.json` を置かない方針のため。1回作れば使い回せる）:
+
+```sh
+# 1. リポジトリの外に、テスト用ツールを入れる
+mkdir -p ~/ecg-phpunit && cd ~/ecg-phpunit
+composer require --dev wp-phpunit/wp-phpunit phpunit/phpunit:^9.6 yoast/phpunit-polyfills:^2
+
+# 2. 使い捨て DB を作る（Local の MySQL に別名で。サイトの DB `local` には触れない）
+#    例: CREATE DATABASE ecg_wpunit;
+
+# 3. wp-tests-config.php を ~/ecg-phpunit に置く。DB_NAME は 2 の名前、ABSPATH は WordPress 本体のあるディレクトリ
+#    （読むだけで書き込まない。Local サイトの public/ を指してよい）。DB_HOST は Local の php.ini の
+#    mysqli.default_socket を使うなら 'localhost'。WP_PHP_BINARY は Local の php（-c で php.ini を渡す）
+
+# 4. 走らせる。Local の php.ini を読む PHP で（@runInSeparateProcess の子プロセスにも効かせるため PHPRC も要る）
+export WP_TESTS_DIR=~/ecg-phpunit/vendor/wp-phpunit/wp-phpunit
+export WP_PHPUNIT__TESTS_CONFIG=~/ecg-phpunit/wp-tests-config.php
+export PHPRC="<Local の conf/php ディレクトリ（php.ini がある所）>"
+php ~/ecg-phpunit/vendor/bin/phpunit -c tests/phpunit.xml.dist        # リポジトリのルートで
+```
+
+- ★★ **`test-constants.php` は定数（`DOING_AUTOSAVE`・`REST_REQUEST`・`WP_CLI` など）を定義するので、各テストを
+  `@runInSeparateProcess` で別プロセスにしている。** 定数は取り消せず、テスト対象のコードは条件を OR で束ねているので、
+  同じプロセスで定義すると先に定義した定数が後のテストを黙って覆い隠す。`tests/bootstrap.php` が
+  `WP_TESTS_SKIP_INSTALL=1` を立てるのは、子プロセスの再インストールで親のテーブルが DROP されるのを防ぐため。
+- ★★ **「テストが緑」は「テストが効いている」ではない。** `create_item()` は `WP_RUN_CORE_TESTS` が定義されていると
+  `DOING_AUTOSAVE` を立てない（コア自身のテストのとき）。wp-phpunit ではこの定数は立たないので REST の自動保存で
+  `DOING_AUTOSAVE` が本当に立つが、それを `test_doing_autosave_is_defined_by_a_rest_autosave` の**陽性対照**で毎回確かめている。
+  テストを足すときも、**修正前のコードに当てて落ちること**を1度は確かめること
+  （前の版のブランチを `git archive` で別ディレクトリに展開し、`tests/` を重ねて走らせる）。
+- `tests/` は `.gitattributes` の `/tests/ export-ignore` で配布 zip・SVN trunk に入らない（★ 先頭 `/` のアンカー必須）。
+  ★ **SVN へは `git archive` の展開物を入れること**（作業ツリーをそのまま入れると `tests/` が入る）。
+
 ## レビュー工程に大（シニアエンジニア）を追加する
 
 このリポジトリでは、安藤（`vk-code-reviewer`）のレビューのあと、**PR を作成する前に**
@@ -120,6 +165,13 @@ phpcs --standard=WordPress-Docs --sniffs=Squiz.Commenting.FunctionComment $(git 
 Local の `editlock`（`editlock.etbs.lc`）。このプラグインは `dirname( __FILE__ )` を
 1階層のみ（`inc/func.php` の require、および `inc/func.php` から `inc/class-*.php` への require）
 に使っており `dirname( __FILE__, N )` の複数階層遡りは無いため、**シンボリックリンク設置でよい**。
+
+★★ **`wporg`（ECG）は symlink 設置ではない。** git `wporg`・SVN `trunk`（`~/Downloads/wporg-svn/etbs-edit-conflict-guard/trunk`）・
+Local の実ディレクトリ（`wp-content/plugins/etbs-edit-conflict-guard/`）の **3 コピーを手で同期する構造**なので、
+下の「`readlink` で向き先を確認」は ECG には空振りする。**作業の最初に「どれを編集し、他の 2 つへどう反映するか」を決める。**
+検証のために Local 側を差し替えるときは、実ディレクトリを先頭ドットの名前へ退避し（コアの `get_plugins()` は読み飛ばす）、
+worktree への symlink を置き、**終わったら symlink を消して退避したものを戻す**。旧 `editlock` は無効のまま維持する
+（有効だと ECG は stand-down して「測っているつもりで何も動いていない」になる）。
 
 CLI 検証では Local の php.ini を `-c` で渡すこと。渡さないと「データベース接続確立エラー」になり、
 **サイトが停止しているように見える**（実際は動いている）。`<runId>` は

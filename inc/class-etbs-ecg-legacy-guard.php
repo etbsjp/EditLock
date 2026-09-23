@@ -43,9 +43,13 @@ class Etbs_Ecg_Legacy_Guard {
 		}
 
 		foreach ( $active as $plugin ) {
-			// Match the folder rename case as well, not just the default path.
-			// フォルダ名を変えて設置された場合も拾う（既定のパスだけを見ない）.
-			if ( self::LEGACY_PLUGIN === $plugin || '/editlock.php' === substr( (string) $plugin, -14 ) ) {
+			// Match the folder rename case as well, not just the default path. '/editlock.php' is 13
+			// characters, so the tail must be cut to 13: cutting 14 (a length it never had) made this
+			// branch false for every renamed folder.
+			// フォルダ名を変えて設置された場合も拾う（既定のパスだけを見ない）。'/editlock.php' は13文字なので
+			// 末尾も13文字で切る。14文字で切ると（この文字列が持ったことのない長さ）、改名されたフォルダでは
+			// 常にこの枝が false になる.
+			if ( self::LEGACY_PLUGIN === $plugin || '/editlock.php' === substr( (string) $plugin, -13 ) ) {
 				return true;
 			}
 		}

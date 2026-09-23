@@ -1,0 +1,20 @@
+<?xml version="1.0"?>
+<!--
+	PHPUnit configuration for ETBS Edit Conflict Guard.
+	Run it from the repository root; see the "PHPUnit" section of CLAUDE.md for the environment.
+-->
+<phpunit
+	bootstrap="bootstrap.php"
+	backupGlobals="false"
+	cacheResult="false"
+	colors="true"
+	convertErrorsToExceptions="true"
+	convertNoticesToExceptions="true"
+	convertWarningsToExceptions="true"
+>
+	<testsuites>
+		<testsuite name="etbs-edit-conflict-guard">
+			<directory prefix="test-" suffix=".php">./</directory>
+		</testsuite>
+	</testsuites>
+</phpunit>
