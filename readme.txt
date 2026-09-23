@@ -85,6 +85,8 @@ Yes, deliberately. If the same account opens the same post in a second tab, wind
 3. The save-blocked modal shown in the Classic Editor when another user already holds the lock on the post being saved.
 4. The save-blocked modal shown in the Block Editor (Gutenberg) when another user already holds the lock on the post being saved.
 5. The support links as they appear on the Plugins list row and in the footer of the Settings > Edit Conflict Guard screen.
+6. The notice shown on a second edit screen when the same account already has the post open elsewhere, saying that this screen cannot save.
+7. Core's post-locked dialog in the Classic Editor, with Edit Conflict Guard's explanation added and the "Take over" button removed.
 
 == Changelog ==
 
