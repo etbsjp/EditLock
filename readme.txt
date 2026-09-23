@@ -4,7 +4,7 @@ Donate link: https://etbs.jp/product/donate/
 Tags: post lock, concurrent editing, editorial workflow, multi author, save conflict
 Requires PHP: 7.4
 Tested up to: 7.1
-Stable tag: 1.0.4
+Stable tag: 1.0.5
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -85,6 +85,11 @@ Yes, deliberately. If the same user opens the same post in a second tab, the sec
 
 == Changelog ==
 
+= 1.0.5 =
+* Fix: autosaving a post released its edit lock, and the lock could not be re-acquired for the rest of the editing session. The post was left unprotected -- other users could save over it -- with nothing on screen to show that the lock was gone. Autosaves and revisions no longer release the lock.
+* Fix: autosaves are no longer rejected by the lock check. An autosave could previously be blocked even when it came from the user who held the lock.
+* Change: in the Block Editor, saving no longer releases the lock. The lock is now held until you leave the edit screen, or until it expires, so the post stays protected while you keep editing.
+
 = 1.0.4 =
 * Added guidance for switching to the WordPress.org release, "ETBS Edit Conflict Guard". The lock behaviour is unchanged.
 
@@ -102,6 +107,9 @@ Yes, deliberately. If the same user opens the same post in a second tab, the sec
 * Initial release.
 
 == Upgrade Notice ==
+
+= 1.0.5 =
+Important fix: in earlier versions, autosaving a post released its edit lock for good. The post then stayed unprotected, so anyone could save over it, and nothing on screen showed that the lock was gone. Update to restore lock protection.
 
 = 1.0.4 =
 EditLock is now on WordPress.org as "ETBS Edit Conflict Guard". This update only adds the switch-over instructions; the lock behaviour is unchanged.
