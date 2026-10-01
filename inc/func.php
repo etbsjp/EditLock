@@ -635,6 +635,7 @@ if ( ! function_exists( 'edlk_heartbeat_received' ) ) {
 }
 
 /*
+ * The effective gate for non-REST saves (a classic full save, Quick Edit, Bulk Edit, and the block editor's meta box save).
  * 非REST経路（クラシックエディタのフル保存・クイック編集・一括編集・ブロックエディタのメタボックス保存）の実効ゲート
  * wp_insert_post() が既存投稿を更新する直前に必ず発火する pre_post_update を使う。
  * （admin_action_editpost はWordPressコアの post.php では実際には発火しないため使えない。
@@ -752,11 +753,15 @@ if ( ! function_exists( 'edlk_pre_post_update_gate' ) ) {
 		 * 1.2.0 did exactly that on every block editor save, because it stopped releasing the lock on
 		 * the REST save and this request then met the screen's own lock.
 		 * What is given up: when another edit screen of the same account manages to send this request
-		 * without a session id, its meta box fields get through (the post itself is still guarded by
-		 * the REST gate). That needs a screen still running an older script, or a request built by
-		 * hand: the block editor only sends this request after its REST save succeeded (confirmed in
-		 * WordPress 6.6 and later), and the REST gate has already checked the session by then. A lock
-		 * held by another account still stops it below.
+		 * without a session id, its meta box fields get through. That needs a screen still running an
+		 * older script, or a request built by hand. The request the block editor sends carries no
+		 * title or content, so the post itself stays guarded by the REST gate; a request built by hand
+		 * is not bound by that. In WordPress 6.4 and later the block editor sends this request only
+		 * after its REST save succeeded, so the REST gate has already checked the session by then. In
+		 * 6.3 and earlier it sends it whether or not the REST save succeeded (5.0 and 5.1 also after
+		 * a preview), so there an older-script screen of the same account gets its meta box fields
+		 * through while its post is stopped. A screen running this version's script always sends
+		 * the session id and is judged by it. A lock held by another account still stops it below.
 		 * セッション ID を持たずに届いたブロックエディタのメタボックス保存は、ロックが現在のユーザー自身の
 		 * アカウントのものなら通す。エディタ用スクリプトがそのフォームにセッション ID を入れるので、
 		 * これが効くのは入らなかったときだけ（プラグイン更新前から開いていた編集画面は古いスクリプトの
@@ -766,9 +771,13 @@ if ( ! function_exists( 'edlk_pre_post_update_gate' ) ) {
 		 * 保存のたびにこれを起こしていた（REST 保存でロックを解放しなくなり、このリクエストが自分の画面の
 		 * ロックに当たるようになったため）。
 		 * 手放すもの: 同じアカウントの別の編集画面が、セッション ID 無しでこのリクエストを送れた場合、
-		 * そのメタボックスの欄は通る（投稿本体は REST 側のゲートが守る）。それには古いスクリプトのままの画面か、
-		 * 手で組んだリクエストが要る。ブロックエディタがこのリクエストを送るのは REST 保存が成功した後だけで
-		 * （WordPress 6.6 以降で確認）、その時点で REST 側のゲートがセッションを確認済み。
+		 * そのメタボックスの欄は通る。それには古いスクリプトのままの画面か、手で組んだリクエストが要る。
+		 * ブロックエディタが送るこのリクエストにタイトルや本文は入らないので、投稿本体は REST 側のゲートが守る
+		 * （手で組んだリクエストはこの限りでない）。WordPress 6.4 以降では、ブロックエディタがこのリクエストを
+		 * 送るのは REST 保存が成功した後だけなので、その時点で REST 側のゲートがセッションを確認済み。
+		 * 6.3 以前は REST 保存の成否を見ずに送る（5.0 と 5.1 はプレビューの後にも送る）ので、そこでは同じ
+		 * アカウントの古いスクリプトの画面が、投稿本体は止まるのにメタボックスの欄だけ通す。この版の
+		 * スクリプトの画面は必ずセッション ID を送り、ID で判定される。
 		 * 別アカウントのロックは、この下で従来どおり止める。
 		 */
 		if ( '' === $session_id && edlk_is_meta_box_loader_request() && get_current_user_id() === (int) $status['user_id'] ) {

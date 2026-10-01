@@ -444,14 +444,17 @@
 	 * .metabox-base-form (plus one form per meta box location). The X-Edlk-Session header above is on
 	 * this request as well (core sends it with apiFetch), but the server-side gate for non-REST saves
 	 * reads the session ID from the posted field only, so it has to be in the form. Without it the
-	 * gate cannot tell this screen from another one and stops the request, and the block editor shows
-	 * nothing when that happens: what was typed into the meta boxes is just lost.
+	 * gate cannot tell this screen from another edit screen of the same account, and lets the request
+	 * through on the account alone (the fallback in edlk_pre_post_update_gate()). 1.2.0 stopped it
+	 * there instead, and the block editor shows nothing when that happens: what was typed into the
+	 * meta boxes was just lost.
 	 * ブロックエディタは REST 保存のあと、メタボックスを post.php?meta-box-loader=1 へ、REST ではない
 	 * 別のリクエストとして送る。本文は .metabox-base-form の欄（＋メタボックスの位置ごとのフォーム）から
 	 * 組み立てられる。上の X-Edlk-Session ヘッダはこのリクエストにも付く（コアは apiFetch で送る）が、
 	 * REST 以外の保存を見るサーバ側のゲートは、セッション ID を POST の欄からしか読まない。だから欄として
-	 * フォームに入れる。無いと、ゲートはこの画面を他の画面と見分けられずに止める。そのときブロック
-	 * エディタは何も表示しないので、メタボックスに入力した内容だけが黙って失われる。
+	 * フォームに入れる。無いと、ゲートはこの画面を同じアカウントの別の編集画面と見分けられず、アカウントの
+	 * 一致だけで通す（edlk_pre_post_update_gate() の代替判定）。1.2.0 はここで止めていた。そのとき
+	 * ブロックエディタは何も表示しないので、メタボックスに入力した内容だけが黙って失われていた。
 	 */
 	function addSessionToMetaBoxForm() {
 		var metaBoxForm = document.querySelector( '.metabox-base-form' );
