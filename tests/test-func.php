@@ -188,6 +188,47 @@ class Test_Etbs_Ecg_Func extends Etbs_Ecg_Test_Case {
 	}
 
 	/**
+	 * Tests edlk_is_meta_box_loader_request().
+	 *
+	 * @return void
+	 */
+	public function test_edlk_is_meta_box_loader_request() {
+		$test_cases = array(
+			array(
+				'test_condition_name' => '管理画面で、meta-box-loader が付いている場合 => true',
+				'admin'               => true,
+				'meta_box'            => true,
+				'expected'            => true,
+			),
+			array(
+				'test_condition_name' => '管理画面で、meta-box-loader が無い場合（クラシックのフル保存など）=> false',
+				'admin'               => true,
+				'meta_box'            => false,
+				'expected'            => false,
+			),
+			array(
+				'test_condition_name' => '管理画面の外で、meta-box-loader が付いている場合 => false',
+				'admin'               => false,
+				'meta_box'            => true,
+				'expected'            => false,
+			),
+		);
+
+		foreach ( $test_cases as $case ) {
+			set_current_screen( $case['admin'] ? 'edit-post' : 'front' );
+			unset( $_GET['meta-box-loader'] );
+			if ( $case['meta_box'] ) {
+				$_GET['meta-box-loader'] = '1';
+			}
+
+			$this->assertSame( $case['expected'], edlk_is_meta_box_loader_request(), $case['test_condition_name'] );
+		}
+		// Leave no trace for the tests that follow.
+		// 後続の試験に残さない.
+		unset( $_GET['meta-box-loader'] );
+	}
+
+	/**
 	 * Tests edlk_get_lock_status_payload() (what edlk_send_lock_status() sends).
 	 *
 	 * @return void
@@ -383,10 +424,59 @@ class Test_Etbs_Ecg_Func extends Etbs_Ecg_Test_Case {
 				'post_session'        => '',
 				'expected_blocked'    => false,
 			),
+			array(
+				'test_condition_name' => '対照: クラシックのフル保存で、自分のアカウントがロック中で、セッション ID が無い場合 => 保存を止める（下のメタボックス保存のケースが通るのは meta-box-loader のためだと言えるように）',
+				'admin'               => true,
+				'lock'                => 'self',
+				'post_session'        => '',
+				'expected_blocked'    => true,
+				'expected_status'     => 409,
+			),
+			array(
+				'test_condition_name' => 'ブロックエディタのメタボックス保存で、自分のアカウントがロック中で、セッション ID が無い場合 => 通す（1.2.0 はここで止め、メタボックスの入力を無言で捨てていた）',
+				'admin'               => true,
+				'meta_box'            => true,
+				'lock'                => 'self',
+				'post_session'        => '',
+				'expected_blocked'    => false,
+			),
+			array(
+				'test_condition_name' => 'ブロックエディタのメタボックス保存で、自分のセッションがロックを保持している場合 => 通す',
+				'admin'               => true,
+				'meta_box'            => true,
+				'lock'                => 'self',
+				'post_session'        => 'S1',
+				'expected_blocked'    => false,
+			),
+			array(
+				'test_condition_name' => 'ブロックエディタのメタボックス保存で、同じアカウントの別セッションの ID が付いている場合 => 保存を止める（ID があるときは ID で厳密に判定する）',
+				'admin'               => true,
+				'meta_box'            => true,
+				'lock'                => 'self',
+				'post_session'        => 'S2',
+				'expected_blocked'    => true,
+				'expected_status'     => 409,
+			),
+			array(
+				'test_condition_name' => 'ブロックエディタのメタボックス保存で、他ユーザーがロック中で、セッション ID が無い場合 => 保存を止める',
+				'admin'               => true,
+				'meta_box'            => true,
+				'lock'                => 'other',
+				'post_session'        => '',
+				'expected_blocked'    => true,
+				'expected_status'     => 409,
+				'expected_contains'   => 'Alice Example is currently editing this post, so it could not be saved.',
+			),
 		);
 
 		foreach ( $test_cases as $case ) {
 			$this->clear_locks();
+			// The block editor's meta box save is told apart by this query parameter alone.
+			// ブロックエディタのメタボックス保存は、このクエリパラメータだけで見分けられる.
+			unset( $_GET['meta-box-loader'] );
+			if ( ! empty( $case['meta_box'] ) ) {
+				$_GET['meta-box-loader'] = '1';
+			}
 			wp_set_current_user( isset( $case['logged_in'] ) && false === $case['logged_in'] ? 0 : $this->me );
 			set_current_screen( $case['admin'] ? 'edit-post' : 'front' );
 			remove_all_filters( 'wp_doing_cron' );
@@ -426,6 +516,9 @@ class Test_Etbs_Ecg_Func extends Etbs_Ecg_Test_Case {
 				$this->assertSame( $case['expected_exact'], $message, $case['test_condition_name'] );
 			}
 		}
+		// Leave no trace for the tests that follow.
+		// 後続の試験に残さない.
+		unset( $_GET['meta-box-loader'] );
 	}
 
 	/**
@@ -563,10 +656,22 @@ class Test_Etbs_Ecg_Func extends Etbs_Ecg_Test_Case {
 				'request_session'     => 'S2',
 				'expected_rows'       => 1,
 			),
+			array(
+				'test_condition_name' => 'ブロックエディタのメタボックス保存で、ゲートが確認済みのセッション ID を持つ場合 => 消さない（タブは開いたままで編集が続く。1件目のケースがこの対照）',
+				'meta_box'            => true,
+				'lock_session'        => 'S1',
+				'request_session'     => 'S1',
+				'expected_rows'       => 1,
+			),
 		);
 
 		foreach ( $test_cases as $case ) {
 			$this->clear_locks();
+			$this->enter_admin_context();
+			unset( $_GET['meta-box-loader'] );
+			if ( ! empty( $case['meta_box'] ) ) {
+				$_GET['meta-box-loader'] = '1';
+			}
 			$this->insert_lock( $this->post_id, $case['lock_session'], $this->me );
 			edlk_current_session_id( $case['request_session'] );
 
@@ -574,6 +679,9 @@ class Test_Etbs_Ecg_Func extends Etbs_Ecg_Test_Case {
 
 			$this->assertSame( $case['expected_rows'], $this->count_lock_rows( $this->post_id ), $case['test_condition_name'] );
 		}
+		// Leave no trace for the tests that follow.
+		// 後続の試験に残さない.
+		unset( $_GET['meta-box-loader'] );
 	}
 
 	/**

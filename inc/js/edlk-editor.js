@@ -437,4 +437,36 @@
 		} );
 	}
 
+	/* ---------- Block editor: send the session ID with the meta box save too / Gutenberg: メタボックス保存にも session_id を付与 ---------- */
+	/*
+	 * After its REST save the block editor posts the meta boxes to post.php?meta-box-loader=1 as a
+	 * separate request that is not a REST request. It builds the body from the fields of
+	 * .metabox-base-form (plus one form per meta box location). The X-Edlk-Session header above is on
+	 * this request as well (core sends it with apiFetch), but the server-side gate for non-REST saves
+	 * reads the session ID from the posted field only, so it has to be in the form. Without it the
+	 * gate cannot tell this screen from another one and stops the request, and the block editor shows
+	 * nothing when that happens: what was typed into the meta boxes is just lost.
+	 * ブロックエディタは REST 保存のあと、メタボックスを post.php?meta-box-loader=1 へ、REST ではない
+	 * 別のリクエストとして送る。本文は .metabox-base-form の欄（＋メタボックスの位置ごとのフォーム）から
+	 * 組み立てられる。上の X-Edlk-Session ヘッダはこのリクエストにも付く（コアは apiFetch で送る）が、
+	 * REST 以外の保存を見るサーバ側のゲートは、セッション ID を POST の欄からしか読まない。だから欄として
+	 * フォームに入れる。無いと、ゲートはこの画面を他の画面と見分けられずに止める。そのときブロック
+	 * エディタは何も表示しないので、メタボックスに入力した内容だけが黙って失われる。
+	 */
+	function addSessionToMetaBoxForm() {
+		var metaBoxForm = document.querySelector( '.metabox-base-form' );
+		if ( ! metaBoxForm || metaBoxForm.querySelector( 'input[name="edlk_session_id"]' ) ) { return; }
+		var metaBoxHidden   = document.createElement( 'input' );
+		metaBoxHidden.type  = 'hidden';
+		metaBoxHidden.name  = 'edlk_session_id';
+		metaBoxHidden.value = sessionId;
+		metaBoxForm.appendChild( metaBoxHidden );
+	}
+	// Core prints the form before the footer scripts, so it is normally there already. The second call
+	// covers a page where this script was moved ahead of it.
+	// コアはこのフォームをフッターのスクリプトより前に出力するので、通常はもう存在する。2回目は、
+	// このスクリプトがフォームより前に移された画面のため。
+	addSessionToMetaBoxForm();
+	document.addEventListener( 'DOMContentLoaded', addSessionToMetaBoxForm );
+
 } )( jQuery );
