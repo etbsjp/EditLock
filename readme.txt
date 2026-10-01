@@ -4,7 +4,7 @@ Donate link: https://etbs.jp/product/donate/
 Tags: post lock, concurrent editing, editorial workflow, multi author, save conflict
 Requires PHP: 7.4
 Tested up to: 7.1
-Stable tag: 1.2.0
+Stable tag: 1.2.1
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -90,6 +90,9 @@ Yes, deliberately. If the same account opens the same post in a second tab, wind
 
 == Changelog ==
 
+= 1.2.1 =
+* Fixed: in the Block Editor, anything entered in meta boxes (SEO fields, custom fields and other classic-style panels added by plugins) was not saved, and no error was shown. This happened on every save of a post type this plugin protects, and started in 1.2.0. The title and content were saved normally. Please re-enter anything that was lost.
+
 = 1.2.0 =
 * Fixed: an autosave no longer releases the lock, which left the post unprotected without any sign.
 * Fixed: saving in the Block Editor no longer leaves the post unprotected for the rest of the editing session.
@@ -131,6 +134,9 @@ Yes, deliberately. If the same account opens the same post in a second tab, wind
 * Initial release.
 
 == Upgrade Notice ==
+
+= 1.2.1 =
+Fixes meta box fields (SEO plugins, custom fields and similar panels) silently not being saved in the Block Editor since 1.2.0. Please update, then re-enter anything that was lost.
 
 = 1.2.0 =
 Fixes the lock being released by an autosave or a Block Editor save, which left posts unprotected without any warning. Also clearer messages when a second tab of the same account blocks a save.
