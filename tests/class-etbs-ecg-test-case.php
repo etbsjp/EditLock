@@ -32,7 +32,7 @@ abstract class Etbs_Ecg_Test_Case extends WP_UnitTestCase {
 		// The stored session ID is a function-level static, so it leaks from one test into the next.
 		// 保持しているセッション ID は関数内 static なので、放っておくと次のテストへ漏れる.
 		edlk_current_session_id( '' );
-		unset( $_POST['edlk_session_id'], $_REQUEST['bulk_edit'] );
+		unset( $_POST['edlk_session_id'], $_REQUEST['bulk_edit'], $_GET['meta-box-loader'] );
 	}
 
 	/**
@@ -47,7 +47,7 @@ abstract class Etbs_Ecg_Test_Case extends WP_UnitTestCase {
 		remove_all_filters( 'wp_doing_cron' );
 		remove_all_filters( 'wp_doing_ajax' );
 		remove_all_filters( 'wp_die_ajax_handler' );
-		unset( $_POST['edlk_session_id'], $_REQUEST['bulk_edit'] );
+		unset( $_POST['edlk_session_id'], $_REQUEST['bulk_edit'], $_GET['meta-box-loader'] );
 		parent::tear_down();
 	}
 

@@ -245,6 +245,33 @@ if ( ! function_exists( 'edlk_is_autosave_request' ) ) {
 	}
 }
 
+if ( ! function_exists( 'edlk_is_meta_box_loader_request' ) ) {
+	/**
+	 * Tells whether the current request is the block editor saving its meta boxes.
+	 * 現在のリクエストが、ブロックエディタのメタボックス保存かどうかを返す。
+	 *
+	 * A block editor save is two requests: the post itself goes through the REST API, and then the
+	 * contents of the meta boxes (SEO fields, custom fields and so on) are posted to
+	 * wp-admin/post.php?meta-box-loader=1, where core runs the same edit_post() as a classic save.
+	 * So this second request is neither REST nor the end of an editing session, and both the save
+	 * gate and the release after a save have to tell it apart from a classic full save.
+	 * The test is the one core itself uses in use_block_editor_for_post().
+	 * ブロックエディタの保存は2つのリクエストに分かれる。投稿本体は REST API で保存され、続いて
+	 * メタボックスの中身（SEO の欄・カスタムフィールドなど）が wp-admin/post.php?meta-box-loader=1 へ
+	 * POST される。コアはそこでクラシックの保存と同じ edit_post() を走らせる。
+	 * つまりこの2つ目は REST ではなく、編集の終了でもない。保存ゲートも保存後の解放も、
+	 * クラシックのフル保存と見分ける必要がある。判定はコア自身が use_block_editor_for_post() で
+	 * 使っているものと同じ。
+	 *
+	 * @return bool True when this is the block editor's meta box save.
+	 */
+	function edlk_is_meta_box_loader_request() {
+		// Only the presence of the parameter is read; core checks the nonces of this request itself.
+		// 読むのはパラメータの有無だけ。このリクエストの nonce はコアが自分で検証する.
+		return is_admin() && isset( $_GET['meta-box-loader'] ); // phpcs:ignore WordPress.Security.NonceVerification.Recommended
+	}
+}
+
 if ( ! function_exists( 'edlk_sanitize_session_id' ) ) {
 	/**
 	 * Validates a session ID sent by the client, returning an empty string when it is not acceptable.
@@ -608,7 +635,8 @@ if ( ! function_exists( 'edlk_heartbeat_received' ) ) {
 }
 
 /*
- * 非REST経路（クラシックエディタのフル保存・クイック編集・一括編集）の実効ゲート
+ * The effective gate for non-REST saves (a classic full save, Quick Edit, Bulk Edit, and the block editor's meta box save).
+ * 非REST経路（クラシックエディタのフル保存・クイック編集・一括編集・ブロックエディタのメタボックス保存）の実効ゲート
  * wp_insert_post() が既存投稿を更新する直前に必ず発火する pre_post_update を使う。
  * （admin_action_editpost はWordPressコアの post.php では実際には発火しないため使えない。
  *   post.php の case 'editpost' は edit_post() を直接呼ぶだけで do_action() を経由しない）
@@ -713,6 +741,47 @@ if ( ! function_exists( 'edlk_pre_post_update_gate' ) ) {
 		$status = Etbs_Ecg_Lock_Manager::status( $post_id );
 		if ( ! $status ) {
 			return; // ロックが存在しない＝競合なし.
+		}
+
+		/*
+		 * The block editor's meta box save that arrives without a session id: let it through when the
+		 * lock belongs to the current user's own account. The editor script puts the session id into
+		 * that form, so this only matters when it did not (an edit screen that was opened before the
+		 * plugin was updated still runs the old script, for example).
+		 * Why not stop it: the block editor does not show a failed meta box save anywhere, so stopping
+		 * it throws away what was typed into every meta box, silently, while the post itself is saved.
+		 * 1.2.0 did exactly that on every block editor save, because it stopped releasing the lock on
+		 * the REST save and this request then met the screen's own lock.
+		 * What is given up: when another edit screen of the same account manages to send this request
+		 * without a session id, its meta box fields get through. That needs a screen still running an
+		 * older script, or a request built by hand. The request the block editor sends carries no
+		 * title or content, so the post itself stays guarded by the REST gate; a request built by hand
+		 * is not bound by that. In WordPress 6.4 and later the block editor sends this request only
+		 * after its REST save succeeded, so the REST gate has already checked the session by then. In
+		 * 6.3 and earlier it sends it whether or not the REST save succeeded (5.0 and 5.1 also after
+		 * a preview), so there an older-script screen of the same account gets its meta box fields
+		 * through while its post is stopped. A screen running this version's script always sends
+		 * the session id and is judged by it. A lock held by another account still stops it below.
+		 * セッション ID を持たずに届いたブロックエディタのメタボックス保存は、ロックが現在のユーザー自身の
+		 * アカウントのものなら通す。エディタ用スクリプトがそのフォームにセッション ID を入れるので、
+		 * これが効くのは入らなかったときだけ（プラグイン更新前から開いていた編集画面は古いスクリプトの
+		 * ままである、など）。
+		 * 止めない理由: ブロックエディタはメタボックス保存の失敗をどこにも表示しない。止めると、投稿本体は
+		 * 保存されるのに、メタボックスに入力した内容だけがすべて無言で捨てられる。1.2.0 はブロックエディタの
+		 * 保存のたびにこれを起こしていた（REST 保存でロックを解放しなくなり、このリクエストが自分の画面の
+		 * ロックに当たるようになったため）。
+		 * 手放すもの: 同じアカウントの別の編集画面が、セッション ID 無しでこのリクエストを送れた場合、
+		 * そのメタボックスの欄は通る。それには古いスクリプトのままの画面か、手で組んだリクエストが要る。
+		 * ブロックエディタが送るこのリクエストにタイトルや本文は入らないので、投稿本体は REST 側のゲートが守る
+		 * （手で組んだリクエストはこの限りでない）。WordPress 6.4 以降では、ブロックエディタがこのリクエストを
+		 * 送るのは REST 保存が成功した後だけなので、その時点で REST 側のゲートがセッションを確認済み。
+		 * 6.3 以前は REST 保存の成否を見ずに送る（5.0 と 5.1 はプレビューの後にも送る）ので、そこでは同じ
+		 * アカウントの古いスクリプトの画面が、投稿本体は止まるのにメタボックスの欄だけ通す。この版の
+		 * スクリプトの画面は必ずセッション ID を送り、ID で判定される。
+		 * 別アカウントのロックは、この下で従来どおり止める。
+		 */
+		if ( '' === $session_id && edlk_is_meta_box_loader_request() && get_current_user_id() === (int) $status['user_id'] ) {
+			return;
 		}
 
 		$message = esc_html( edlk_get_save_blocked_message( $status ) );
@@ -859,6 +928,18 @@ if ( ! function_exists( 'edlk_release_after_save' ) ) {
 		 * 解放してよいのはクラシックのフル保存だけで、そちらは保存後にページが遷移する。
 		 */
 		if ( defined( 'REST_REQUEST' ) && REST_REQUEST ) {
+			return;
+		}
+
+		/*
+		 * The block editor's meta box save is the second half of that same save, not a classic full
+		 * save: the tab stays open. It carries the session id (the editor script adds it to the form),
+		 * so without this it would release the lock right after the REST save had kept it.
+		 * ブロックエディタのメタボックス保存は、上の REST 保存と同じ1回の保存の後半であって、クラシックの
+		 * フル保存ではない（タブは開いたまま）。このリクエストはセッション ID を持つ（エディタ用スクリプトが
+		 * フォームに入れる）ので、ここで止めないと、REST 保存が残したロックを直後に解放してしまう。
+		 */
+		if ( edlk_is_meta_box_loader_request() ) {
 			return;
 		}
 
