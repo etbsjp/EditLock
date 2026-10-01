@@ -142,4 +142,27 @@
 		} );
 	}
 
+	/* ---------- Gutenberg: メタボックス保存にも session_id を付与 ---------- */
+	/*
+	 * ブロックエディタは REST 保存のあと、メタボックスを post.php?meta-box-loader=1 へ、REST ではない
+	 * 別のリクエストとして送る。本文は .metabox-base-form の欄（＋メタボックスの位置ごとのフォーム）から
+	 * 組み立てられる。上の X-EditLock-Session ヘッダはこのリクエストにも付く（コアは apiFetch で送る）が、
+	 * REST 以外の保存を見るサーバ側のゲートは、セッション ID を POST の欄からしか読まない。だから欄として
+	 * フォームに入れる。無いと、ゲートはこの画面を他の画面と見分けられずに止める。そのときブロック
+	 * エディタは何も表示しないので、メタボックスに入力した内容だけが黙って失われる。
+	 */
+	function addSessionToMetaBoxForm() {
+		var metaBoxForm = document.querySelector( '.metabox-base-form' );
+		if ( ! metaBoxForm || metaBoxForm.querySelector( 'input[name="edlk_session_id"]' ) ) { return; }
+		var metaBoxHidden   = document.createElement( 'input' );
+		metaBoxHidden.type  = 'hidden';
+		metaBoxHidden.name  = 'edlk_session_id';
+		metaBoxHidden.value = sessionId;
+		metaBoxForm.appendChild( metaBoxHidden );
+	}
+	// コアはこのフォームをフッターのスクリプトより前に出力するので、通常はもう存在する。2回目は、
+	// このスクリプトがフォームより前に移された画面のため。
+	addSessionToMetaBoxForm();
+	document.addEventListener( 'DOMContentLoaded', addSessionToMetaBoxForm );
+
 } )( jQuery );
