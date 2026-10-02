@@ -4,7 +4,7 @@ Donate link: https://etbs.jp/product/donate/
 Tags: post lock, concurrent editing, editorial workflow, multi author, save conflict
 Requires PHP: 7.4
 Tested up to: 7.1
-Stable tag: 1.0.5
+Stable tag: 1.0.6
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -85,6 +85,9 @@ Yes, deliberately. If the same user opens the same post in a second tab, the sec
 
 == Changelog ==
 
+= 1.0.6 =
+* Fix: in the Block Editor, anything entered in meta boxes (SEO fields, custom fields and other classic-style panels added by plugins) was not saved, and no error was shown. This happened on every save of a post type EditLock protects, and started in 1.0.5. The title and content were saved normally. Please re-enter anything that was lost.
+
 = 1.0.5 =
 * Fix: autosaving a post released its edit lock, and the lock could not be re-acquired for the rest of the editing session. The post was left unprotected -- other users could save over it -- with nothing on screen to show that the lock was gone. Autosaves and revisions no longer release the lock.
 * Fix: autosaves are no longer rejected by the lock check. An autosave could previously be blocked even when it came from the user who held the lock.
@@ -107,6 +110,9 @@ Yes, deliberately. If the same user opens the same post in a second tab, the sec
 * Initial release.
 
 == Upgrade Notice ==
+
+= 1.0.6 =
+Important fix: since 1.0.5, meta box fields (SEO plugins, custom fields and similar panels) were silently not saved in the Block Editor. Please update, then re-enter anything that was lost.
 
 = 1.0.5 =
 Important fix: in earlier versions, autosaving a post released its edit lock for good. The post then stayed unprotected, so anyone could save over it, and nothing on screen showed that the lock was gone. Update to restore lock protection.
