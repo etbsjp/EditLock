@@ -48,8 +48,8 @@ class Test_Etbs_Ecg_Hook_Wiring extends Etbs_Ecg_Test_Case {
 	private $gone;
 
 	/**
-	 * Whether the hook added in set_up() to run before the save gate's neighbours has been reached.
-	 * 保存ゲートの直後の優先度に置いた探針フックが走ったかどうか。
+	 * Whether the probe hook added per case in test_edit_post() (just after the save gate's priority) has been reached.
+	 * test_edit_post() がケースごとに保存ゲートの直後の優先度へ置く探針フックが走ったかどうか。
 	 *
 	 * @var bool
 	 */
