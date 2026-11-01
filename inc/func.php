@@ -255,20 +255,28 @@ if ( ! function_exists( 'edlk_is_meta_box_loader_request' ) ) {
 	 * wp-admin/post.php?meta-box-loader=1, where core runs the same edit_post() as a classic save.
 	 * So this second request is neither REST nor the end of an editing session, and both the save
 	 * gate and the release after a save have to tell it apart from a classic full save.
-	 * The test is the one core itself uses in use_block_editor_for_post().
+	 * The parameter is the one core looks at in use_block_editor_for_post(); on top of that this
+	 * requires wp-admin/post.php and a non-Ajax request, because core only sends the meta box save
+	 * there. Without those two, a hand-added ?meta-box-loader=1 on any other wp-admin URL (Quick Edit's
+	 * admin-ajax.php, for one) would count as well.
 	 * ブロックエディタの保存は2つのリクエストに分かれる。投稿本体は REST API で保存され、続いて
 	 * メタボックスの中身（SEO の欄・カスタムフィールドなど）が wp-admin/post.php?meta-box-loader=1 へ
 	 * POST される。コアはそこでクラシックの保存と同じ edit_post() を走らせる。
 	 * つまりこの2つ目は REST ではなく、編集の終了でもない。保存ゲートも保存後の解放も、
-	 * クラシックのフル保存と見分ける必要がある。判定はコア自身が use_block_editor_for_post() で
-	 * 使っているものと同じ。
+	 * クラシックのフル保存と見分ける必要がある。パラメータはコアが use_block_editor_for_post() で
+	 * 見ているものと同じだが、それに加えて wp-admin/post.php かつ Ajax でないことを求める。
+	 * コアがメタボックス保存を送るのはそこだけで、この2つが無いと、wp-admin 配下のほかの URL
+	 * （たとえばクイック編集の admin-ajax.php）に手で ?meta-box-loader=1 を付けても真になってしまう。
 	 *
 	 * @return bool True when this is the block editor's meta box save.
 	 */
 	function edlk_is_meta_box_loader_request() {
 		// Only the presence of the parameter is read; core checks the nonces of this request itself.
 		// 読むのはパラメータの有無だけ。このリクエストの nonce はコアが自分で検証する.
-		return is_admin() && isset( $_GET['meta-box-loader'] ); // phpcs:ignore WordPress.Security.NonceVerification.Recommended
+		return is_admin()
+			&& isset( $GLOBALS['pagenow'] ) && 'post.php' === $GLOBALS['pagenow']
+			&& ! wp_doing_ajax()
+			&& isset( $_GET['meta-box-loader'] ); // phpcs:ignore WordPress.Security.NonceVerification.Recommended
 	}
 }
 
@@ -732,6 +740,23 @@ if ( ! function_exists( 'edlk_pre_post_update_gate' ) ) {
 
 		// WordPressコア（post.php）が投稿保存の直前に既にnonce検証を済ませているため、ここでの再検証は不要.
 		$session_id = isset( $_POST['edlk_session_id'] ) ? edlk_sanitize_session_id( sanitize_text_field( wp_unslash( $_POST['edlk_session_id'] ) ) ) : ''; // phpcs:ignore WordPress.Security.NonceVerification.Missing
+
+		/*
+		 * The block editor's meta box save: when the form field is empty, read the X-Edlk-Session header.
+		 * Core sends the meta box save through apiFetch, and this plugin's script adds the header to every
+		 * apiFetch (since 1.1.0), so even an edit screen opened before an update, which still runs the
+		 * old script that does not put the ID into the form, carries it. That lets a second tab of the
+		 * same account be judged by its ID in WordPress 6.3 and earlier, where the meta box save is sent
+		 * even when the REST save was stopped.
+		 * ブロックエディタのメタボックス保存では、フォームの欄が空なら X-Edlk-Session ヘッダを読む。
+		 * コアはこの保存を apiFetch で送り、このプラグインのスクリプトは 1.1.0 以降すべての apiFetch に
+		 * このヘッダを足している。そのため、ID をフォームに入れない古いスクリプトのまま、更新前から
+		 * 開いていた編集画面でも ID を持っている。WordPress 6.3 以前は REST 保存が止められてもメタボックス
+		 * 保存が送られるが、同じアカウントの2枚目のタブをここで ID により判定できる。
+		 */
+		if ( '' === $session_id && edlk_is_meta_box_loader_request() && isset( $_SERVER['HTTP_X_EDLK_SESSION'] ) ) {
+			$session_id = edlk_sanitize_session_id( sanitize_text_field( wp_unslash( $_SERVER['HTTP_X_EDLK_SESSION'] ) ) );
+		}
 		edlk_current_session_id( $session_id );
 
 		if ( '' !== $session_id && Etbs_Ecg_Lock_Manager::is_holder( $post_id, $session_id ) ) {
@@ -759,9 +784,9 @@ if ( ! function_exists( 'edlk_pre_post_update_gate' ) ) {
 		 * is not bound by that. In WordPress 6.4 and later the block editor sends this request only
 		 * after its REST save succeeded, so the REST gate has already checked the session by then. In
 		 * 6.3 and earlier it sends it whether or not the REST save succeeded (5.0 and 5.1 also after
-		 * a preview), so there an older-script screen of the same account gets its meta box fields
-		 * through while its post is stopped. A screen running this version's script always sends
-		 * the session id and is judged by it. A lock held by another account still stops it below.
+		 * a preview), but the X-Edlk-Session header read above still carries the ID of an older-script
+		 * screen, so it is judged by that ID and stopped. Only a request with neither the field nor the
+		 * header gets here. A lock held by another account still stops it below.
 		 * セッション ID を持たずに届いたブロックエディタのメタボックス保存は、ロックが現在のユーザー自身の
 		 * アカウントのものなら通す。エディタ用スクリプトがそのフォームにセッション ID を入れるので、
 		 * これが効くのは入らなかったときだけ（プラグイン更新前から開いていた編集画面は古いスクリプトの
@@ -775,9 +800,9 @@ if ( ! function_exists( 'edlk_pre_post_update_gate' ) ) {
 		 * ブロックエディタが送るこのリクエストにタイトルや本文は入らないので、投稿本体は REST 側のゲートが守る
 		 * （手で組んだリクエストはこの限りでない）。WordPress 6.4 以降では、ブロックエディタがこのリクエストを
 		 * 送るのは REST 保存が成功した後だけなので、その時点で REST 側のゲートがセッションを確認済み。
-		 * 6.3 以前は REST 保存の成否を見ずに送る（5.0 と 5.1 はプレビューの後にも送る）ので、そこでは同じ
-		 * アカウントの古いスクリプトの画面が、投稿本体は止まるのにメタボックスの欄だけ通す。この版の
-		 * スクリプトの画面は必ずセッション ID を送り、ID で判定される。
+		 * 6.3 以前は REST 保存の成否を見ずに送る（5.0 と 5.1 はプレビューの後にも送る）が、上で読む
+		 * X-Edlk-Session ヘッダに古いスクリプトの画面の ID が乗っているので、その ID で判定されて止まる。
+		 * ここに来るのは、欄もヘッダも無いリクエストだけ。
 		 * 別アカウントのロックは、この下で従来どおり止める。
 		 */
 		if ( '' === $session_id && edlk_is_meta_box_loader_request() && get_current_user_id() === (int) $status['user_id'] ) {
@@ -876,6 +901,23 @@ if ( ! function_exists( 'edlk_rest_pre_insert_gate' ) ) {
 		// REST の保存では解放に使わなくなったが（edlk_release_after_save() 参照）、
 		// 将来その分岐を戻したときに黙って壊れないよう呼び出しは残す.
 		$session_id = edlk_sanitize_session_id( (string) $request->get_header( 'x_edlk_session' ) );
+
+		/*
+		 * The block editor's meta box save: when the form field is empty, read the X-Edlk-Session header.
+		 * Core sends the meta box save through apiFetch, and this plugin's script adds the header to every
+		 * apiFetch (since 1.1.0), so even an edit screen opened before an update, which still runs the
+		 * old script that does not put the ID into the form, carries it. That lets a second tab of the
+		 * same account be judged by its ID in WordPress 6.3 and earlier, where the meta box save is sent
+		 * even when the REST save was stopped.
+		 * ブロックエディタのメタボックス保存では、フォームの欄が空なら X-Edlk-Session ヘッダを読む。
+		 * コアはこの保存を apiFetch で送り、このプラグインのスクリプトは 1.1.0 以降すべての apiFetch に
+		 * このヘッダを足している。そのため、ID をフォームに入れない古いスクリプトのまま、更新前から
+		 * 開いていた編集画面でも ID を持っている。WordPress 6.3 以前は REST 保存が止められてもメタボックス
+		 * 保存が送られるが、同じアカウントの2枚目のタブをここで ID により判定できる。
+		 */
+		if ( '' === $session_id && edlk_is_meta_box_loader_request() && isset( $_SERVER['HTTP_X_EDLK_SESSION'] ) ) {
+			$session_id = edlk_sanitize_session_id( sanitize_text_field( wp_unslash( $_SERVER['HTTP_X_EDLK_SESSION'] ) ) );
+		}
 		edlk_current_session_id( $session_id );
 
 		if ( '' !== $session_id && Etbs_Ecg_Lock_Manager::is_holder( $post_id, $session_id ) ) {

@@ -99,7 +99,7 @@ class Test_Etbs_Ecg_Hook_Wiring extends Etbs_Ecg_Test_Case {
 	 * @return void
 	 */
 	public function tear_down() {
-		unset( $_POST['ecg_test_box'], $_POST['post_ID'] );
+		unset( $_POST['ecg_test_box'], $_POST['post_ID'], $_SERVER['HTTP_X_EDLK_SESSION'] );
 		parent::tear_down();
 	}
 
@@ -149,11 +149,15 @@ class Test_Etbs_Ecg_Hook_Wiring extends Etbs_Ecg_Test_Case {
 	 * @param int    $post_id    Post ID.
 	 * @param bool   $meta_box   Whether the request is the block editor's meta box save.
 	 * @param string $session_id Value of the edlk_session_id field ('' leaves the field out).
+	 * @param string $header     Value of the X-Edlk-Session request header ('' leaves the header out).
 	 * @return int|null HTTP status when the save gate stopped the save, or null when it went through.
 	 */
-	private function run_edit_post( $post_id, $meta_box, $session_id ) {
+	private function run_edit_post( $post_id, $meta_box, $session_id, $header = '' ) {
 		$this->enter_admin_context();
-		unset( $_GET['meta-box-loader'], $_POST['edlk_session_id'] );
+		unset( $_GET['meta-box-loader'], $_POST['edlk_session_id'], $_SERVER['HTTP_X_EDLK_SESSION'] );
+		if ( '' !== $header ) {
+			$_SERVER['HTTP_X_EDLK_SESSION'] = $header;
+		}
 		if ( $meta_box ) {
 			$_GET['meta-box-loader'] = '1';
 		}
@@ -252,6 +256,24 @@ class Test_Etbs_Ecg_Hook_Wiring extends Etbs_Ecg_Test_Case {
 				'lock'                => 'self',
 				'session'             => 'S2',
 				'expected_blocked'    => true,
+				'expected_rows'       => 1,
+			),
+			array(
+				'test_condition_name' => 'メタボックス保存で、欄が無く、ヘッダが同じアカウントの別セッション（S2）の場合 => 止まる（1.2.0 のスクリプトで開いたままの2枚目のタブ。#18。ヘッダを読む配線）',
+				'meta_box'            => true,
+				'lock'                => 'self',
+				'session'             => '',
+				'header'              => 'S2',
+				'expected_blocked'    => true,
+				'expected_rows'       => 1,
+			),
+			array(
+				'test_condition_name' => 'メタボックス保存で、欄が無く、ヘッダがロックを保持するセッション（S1）の場合 => 通る',
+				'meta_box'            => true,
+				'lock'                => 'self',
+				'session'             => '',
+				'header'              => 'S1',
+				'expected_blocked'    => false,
 				'expected_rows'       => 1,
 			),
 			array(
@@ -369,7 +391,7 @@ class Test_Etbs_Ecg_Hook_Wiring extends Etbs_Ecg_Test_Case {
 			// ちょうど 2 なら先に登録されている分ゲートが先に走るので、この探針では拾えず、test_hook_registration の assertSame( 1, ... ) が拾う.
 			add_action( 'pre_post_update', array( $this, 'mark_probe_after_gate' ), 2 );
 
-			$status = $this->run_edit_post( $post_id, $case['meta_box'], $case['session'] );
+			$status = $this->run_edit_post( $post_id, $case['meta_box'], $case['session'], isset( $case['header'] ) ? $case['header'] : '' );
 
 			remove_action( 'pre_post_update', array( $this, 'mark_probe_after_gate' ), 2 );
 			$name = $case['test_condition_name'];
