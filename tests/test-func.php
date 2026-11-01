@@ -212,6 +212,34 @@ class Test_Etbs_Ecg_Func extends Etbs_Ecg_Test_Case {
 				'meta_box'            => true,
 				'expected'            => false,
 			),
+			array(
+				'test_condition_name' => 'post.php 以外（admin-ajax.php）で、meta-box-loader を手で付けた場合 => false',
+				'admin'               => true,
+				'meta_box'            => true,
+				'pagenow'             => 'admin-ajax.php',
+				'expected'            => false,
+			),
+			array(
+				'test_condition_name' => 'post.php 以外（edit.php）で、meta-box-loader を手で付けた場合 => false',
+				'admin'               => true,
+				'meta_box'            => true,
+				'pagenow'             => 'edit.php',
+				'expected'            => false,
+			),
+			array(
+				'test_condition_name' => 'pagenow が未設定で、meta-box-loader が付いている場合 => false（notice を出さない）',
+				'admin'               => true,
+				'meta_box'            => true,
+				'pagenow'             => null,
+				'expected'            => false,
+			),
+			array(
+				'test_condition_name' => 'post.php でも Ajax の場合 => false',
+				'admin'               => true,
+				'meta_box'            => true,
+				'ajax'                => true,
+				'expected'            => false,
+			),
 		);
 
 		foreach ( $test_cases as $case ) {
@@ -220,9 +248,23 @@ class Test_Etbs_Ecg_Func extends Etbs_Ecg_Test_Case {
 			if ( $case['meta_box'] ) {
 				$_GET['meta-box-loader'] = '1';
 			}
+			$GLOBALS['pagenow'] = 'post.php';
+			if ( array_key_exists( 'pagenow', $case ) ) {
+				if ( null === $case['pagenow'] ) {
+					unset( $GLOBALS['pagenow'] );
+				} else {
+					$GLOBALS['pagenow'] = $case['pagenow'];
+				}
+			}
+			remove_all_filters( 'wp_doing_ajax' );
+			if ( ! empty( $case['ajax'] ) ) {
+				add_filter( 'wp_doing_ajax', '__return_true' );
+			}
 
 			$this->assertSame( $case['expected'], edlk_is_meta_box_loader_request(), $case['test_condition_name'] );
 		}
+		remove_all_filters( 'wp_doing_ajax' );
+		$GLOBALS['pagenow'] = 'post.php';
 		// Leave no trace for the tests that follow.
 		// 後続の試験に残さない.
 		unset( $_GET['meta-box-loader'] );
@@ -467,10 +509,93 @@ class Test_Etbs_Ecg_Func extends Etbs_Ecg_Test_Case {
 				'expected_status'     => 409,
 				'expected_contains'   => 'Alice Example is currently editing this post, so it could not be saved.',
 			),
+			array(
+				'test_condition_name' => 'メタボックス保存で、欄が無く、ヘッダが同じアカウントの別セッション（S2）の場合 => 止まる（1.2.0 のスクリプトで開いたままの2枚目のタブ。#18）',
+				'admin'               => true,
+				'meta_box'            => true,
+				'lock'                => 'self',
+				'post_session'        => '',
+				'header_session'      => 'S2',
+				'expected_blocked'    => true,
+				'expected_status'     => 409,
+			),
+			array(
+				'test_condition_name' => 'メタボックス保存で、欄が無く、ヘッダがロックを保持するセッション（S1）の場合 => 通す',
+				'admin'               => true,
+				'meta_box'            => true,
+				'lock'                => 'self',
+				'post_session'        => '',
+				'header_session'      => 'S1',
+				'expected_blocked'    => false,
+			),
+			array(
+				'test_condition_name' => 'メタボックス保存で、欄もヘッダも無い場合（ロック保持側の古いスクリプト）=> 通す（同じアカウントの保険）',
+				'admin'               => true,
+				'meta_box'            => true,
+				'lock'                => 'self',
+				'post_session'        => '',
+				'expected_blocked'    => false,
+			),
+			array(
+				'test_condition_name' => 'メタボックス保存で、欄が無く、ヘッダが不正な値（65 文字）の場合 => 無いものとして扱い、同じアカウントの保険で通す',
+				'admin'               => true,
+				'meta_box'            => true,
+				'lock'                => 'self',
+				'post_session'        => '',
+				'header_session'      => 'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa',
+				'expected_blocked'    => false,
+			),
+			array(
+				'test_condition_name' => 'メタボックス保存で、他ユーザーのロックに対し、欄が無くヘッダが S2 の場合 => 止まる',
+				'admin'               => true,
+				'meta_box'            => true,
+				'lock'                => 'other',
+				'post_session'        => '',
+				'header_session'      => 'S2',
+				'expected_blocked'    => true,
+				'expected_status'     => 409,
+			),
+			array(
+				'test_condition_name' => '対照: クラシックのフル保存で、欄が無くヘッダが S1 の場合 => ヘッダは読まず、止める（ヘッダを読むのはメタボックス保存のときに限る）',
+				'admin'               => true,
+				'lock'                => 'self',
+				'post_session'        => '',
+				'header_session'      => 'S1',
+				'expected_blocked'    => true,
+				'expected_status'     => 409,
+			),
+			array(
+				'test_condition_name' => 'post.php 以外で meta-box-loader を手で付け、欄が無くヘッダが S1 の場合 => メタボックス保存と見なさず、止める',
+				'admin'               => true,
+				'meta_box'            => true,
+				'pagenow'             => 'edit.php',
+				'lock'                => 'self',
+				'post_session'        => '',
+				'header_session'      => 'S1',
+				'expected_blocked'    => true,
+				'expected_status'     => 409,
+			),
+			array(
+				'test_condition_name' => 'メタボックス保存で、欄が S1、ヘッダが S2 の場合 => 欄を優先して通す（ヘッダは欄が空のときだけ読む）',
+				'admin'               => true,
+				'meta_box'            => true,
+				'lock'                => 'self',
+				'post_session'        => 'S1',
+				'header_session'      => 'S2',
+				'expected_blocked'    => false,
+			),
 		);
 
 		foreach ( $test_cases as $case ) {
 			$this->clear_locks();
+			// The stored session ID is a function-level static, so it must not leak from the previous case.
+			// 保持しているセッション ID は関数内 static なので、前のケースから漏らさない.
+			edlk_current_session_id( '' );
+			unset( $_SERVER['HTTP_X_EDLK_SESSION'] );
+			$GLOBALS['pagenow'] = isset( $case['pagenow'] ) ? $case['pagenow'] : 'post.php';
+			if ( isset( $case['header_session'] ) ) {
+				$_SERVER['HTTP_X_EDLK_SESSION'] = $case['header_session'];
+			}
 			// The block editor's meta box save is told apart by this query parameter alone.
 			// ブロックエディタのメタボックス保存は、このクエリパラメータだけで見分けられる.
 			unset( $_GET['meta-box-loader'] );
@@ -518,7 +643,8 @@ class Test_Etbs_Ecg_Func extends Etbs_Ecg_Test_Case {
 		}
 		// Leave no trace for the tests that follow.
 		// 後続の試験に残さない.
-		unset( $_GET['meta-box-loader'] );
+		unset( $_GET['meta-box-loader'], $_SERVER['HTTP_X_EDLK_SESSION'] );
+		$GLOBALS['pagenow'] = 'post.php';
 	}
 
 	/**

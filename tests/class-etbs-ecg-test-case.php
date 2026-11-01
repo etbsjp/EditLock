@@ -21,6 +21,14 @@ abstract class Etbs_Ecg_Test_Case extends WP_UnitTestCase {
 	protected $last_gate_status = null;
 
 	/**
+	 * The value of $GLOBALS['pagenow'] before the test, restored afterwards.
+	 * テストの前の $GLOBALS['pagenow'] の値。終わったら戻す。
+	 *
+	 * @var string|null
+	 */
+	protected $original_pagenow = null;
+
+	/**
 	 * Empties the lock table and resets per-request state before each test.
 	 * 各テストの前に、ロックテーブルとリクエスト内の状態を初期化する。
 	 *
@@ -32,7 +40,11 @@ abstract class Etbs_Ecg_Test_Case extends WP_UnitTestCase {
 		// The stored session ID is a function-level static, so it leaks from one test into the next.
 		// 保持しているセッション ID は関数内 static なので、放っておくと次のテストへ漏れる.
 		edlk_current_session_id( '' );
-		unset( $_POST['edlk_session_id'], $_REQUEST['bulk_edit'], $_GET['meta-box-loader'] );
+		unset( $_POST['edlk_session_id'], $_REQUEST['bulk_edit'], $_GET['meta-box-loader'], $_SERVER['HTTP_X_EDLK_SESSION'] );
+		// The meta box save is only recognised on wp-admin/post.php, which is where core sends it.
+		// メタボックス保存と見なすのは wp-admin/post.php だけ（コアが送る先）.
+		$this->original_pagenow = isset( $GLOBALS['pagenow'] ) ? $GLOBALS['pagenow'] : null;
+		$GLOBALS['pagenow']     = 'post.php';
 	}
 
 	/**
@@ -47,7 +59,12 @@ abstract class Etbs_Ecg_Test_Case extends WP_UnitTestCase {
 		remove_all_filters( 'wp_doing_cron' );
 		remove_all_filters( 'wp_doing_ajax' );
 		remove_all_filters( 'wp_die_ajax_handler' );
-		unset( $_POST['edlk_session_id'], $_REQUEST['bulk_edit'], $_GET['meta-box-loader'] );
+		unset( $_POST['edlk_session_id'], $_REQUEST['bulk_edit'], $_GET['meta-box-loader'], $_SERVER['HTTP_X_EDLK_SESSION'] );
+		if ( null === $this->original_pagenow ) {
+			unset( $GLOBALS['pagenow'] );
+		} else {
+			$GLOBALS['pagenow'] = $this->original_pagenow;
+		}
 		parent::tear_down();
 	}
 
