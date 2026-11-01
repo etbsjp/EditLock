@@ -10,7 +10,9 @@
 | メインファイル | `editlock.php` | **`etbs-edit-conflict-guard.php`** |
 | 関数・定数・オプションの接頭辞 | `edlk_` / `EDLK_` | **変更なし**（スラッグ由来ではないため。既存サイトの設定が残る） |
 
-★ `dist`（1.0.4）は**旧名のまま**。改名したのは wp.org 版だけで、両者は WordPress から見て別プラグイン。
+★ `dist`（1.0.6）は**旧名のまま**。改名したのは wp.org 版だけで、両者は WordPress から見て別プラグイン。
+（2026-11-02 実測: `git show origin/dist:readme.txt | grep '^Stable tag:'` → 1.0.6。ヘッダ `Version:` と
+`EDLK_VERSION` も 1.0.6。**版数はここに頼らず、上のコマンドで確かめること**）
 
 etbs が配布する WordPress プラグイン。共通ルールの正本は `~/.claude/etbs-plugin-rules.md`。
 
@@ -138,6 +140,13 @@ php ~/ecg-phpunit/vendor/bin/phpunit -c tests/phpunit.xml.dist        # リポ�
   `DOING_AUTOSAVE` が本当に立つが、それを `test_doing_autosave_is_defined_by_a_rest_autosave` の**陽性対照**で毎回確かめている。
   テストを足すときも、**修正前のコードに当てて落ちること**を1度は確かめること
   （前の版のブランチを `git archive` で別ディレクトリに展開し、`tests/` を重ねて走らせる）。
+- ★★ **`tests/test-hook-wiring.php` は WordPress のフック経由で保存を通す**（コアの `edit_post()` と
+  `rest_get_server()->dispatch()`）。他のファイルは関数を直接呼ぶので、`add_action( 'pre_post_update', ... )` や
+  `add_action( 'save_post', ... )` を消しても緑のままだった（#19）。保存ゲート・解放に触れる変更では、
+  フック登録行を消す／優先度を変える／ゲートの条件を緩めるのどれかで**赤になること**を1度は確かめる。
+- ★ Local の MySQL ソケットのパス（`run/<runId>`）は Local を再起動すると変わる。`PHPRC` が指す `php.ini` の
+  `mysqli.default_socket` が古いと `db_connect_fail` で止まる（サイトが壊れたのではない）。`ls -d ~/Library/Application\ Support/Local/run/*/mysql/mysqld.sock`
+  で動いている方を確かめ、`php.ini` のコピーを作って向け直す。使い捨て DB（`ecg_wpunit`）が無ければ `db_select_fail` になるので作る。
 - `tests/` は `.gitattributes` の `/tests/ export-ignore` で配布 zip・SVN trunk に入らない（★ 先頭 `/` のアンカー必須）。
   ★ **SVN へは `git archive` の展開物を入れること**（作業ツリーをそのまま入れると `tests/` が入る）。
 
@@ -242,6 +251,36 @@ $GLOBALS['wp_textdomain_registry']->get( 'etbs-edit-conflict-guard', 'ja' );
 ★ `set_current_screen()` を使うなら
 `wp-admin/includes/class-wp-screen.php` を先に require する。
 
+### ★★★ リリース前の実機確認には「メタボックスがある状態のブロックエディタ保存」を入れる（#16・#19）
+
+1.2.0 の欠陥（#16）は、PHPUnit が全部緑・実機確認 21 項目も通過した状態で公開された。原因は、検証サイトに
+**メタボックスが1つも無く、ブロックエディタのメタボックス保存のリクエストが一度も送られなかった**こと。
+実機確認の項目に、次の条件を満たす保存を必ず入れる。
+
+- ★★ **ブロックエディタの保存は2つのリクエストに分かれる。** 1つ目が投稿本体（REST）、2つ目が
+  メタボックスの中身（`wp-admin/post.php?meta-box-loader=1` への POST。コアはここでクラシックと同じ
+  `edit_post()` を走らせる）。**2つ目が失敗しても、画面には何も出ない。** 投稿本体は保存されているので
+  「保存できた」と見える。
+- ★★★ **検証サイトには、`save_post` で保存する本物のメタボックスを置く。** `add_meta_box()` で欄を出し、
+  `save_post` で `update_post_meta()` する小さなプラグイン（mu-plugin でよい）でよい。
+  **WordPress 本体の「カスタムフィールド」パネルでは代用できない。** 本体はこの欄の更新を
+  保存ゲート（`pre_post_update`）より前に済ませるので、ゲートが止めても値が残り、欠陥が再現しない。
+  （PHPUnit の `tests/test-hook-wiring.php` が使う代役のメタボックスも、同じ理由で `save_post` で保存する形にしてある）
+- **検証サイトの既定エディタがクラシックになっていないかを先に確かめる。** クラシックだと
+  `meta-box-loader` のリクエストが送られず、確認したつもりで何も測れていない。
+- ★★ **プラグインのディレクトリを差し替えた直後は、PHP-FPM が前の版のコードを読み続けることがある（OPcache）。**
+  **実際に読み込まれている版を確かめてから測る**（例: `EDLK_VERSION`／`ETBS_ECG_VERSION` の値、
+  `wp_enqueue_script()` のクエリ文字列 `?ver=` を画面のソースで見る）。前の版を測って「効いた」と判断しない。
+- ★★★ **スクリプトが効いているかは「保存できた」では分からない**（保険で通るため。セッション ID が無くても
+  自分のアカウントのロックなら通す）。次の2つで見る。
+  1. 2つ目のリクエストの送信データ（DevTools の Network で `meta-box-loader=1`）に **`edlk_session_id` が入っている**こと
+  2. **2枚目のタブ**（同じ投稿を別に開いたもの）のコンソールで
+     `await wp.data.dispatch('core/edit-post').requestMetaBoxUpdates()` を実行し、**409 になる**こと
+     （別セッションの保存は止まる、の確認）
+
+保存ゲートと保存後の解放の配線そのものは PHPUnit（`tests/test-hook-wiring.php`）が通す。
+**ただし PHPUnit が通すのは WordPress のフックまでで、エディタ用スクリプトがセッション ID を送るかは実機でしか見えない。**
+
 ## アンインストール
 
 ★ `uninstall.php` の方針は**案A**（task-queue #108）。判定は3分類。
@@ -280,7 +319,7 @@ $GLOBALS['wp_textdomain_registry']->get( 'etbs-edit-conflict-guard', 'ja' );
 
 ★★★ **PUC は `dist` に入っている**（実測 2026-09-04:
 `git ls-tree -r --name-only dist | grep -c update-checker` → **116**）。
-#195 で `d7fdc09^` からバイト単位で復元し、**1.0.4 として既に配信済み**。
+#195 で `d7fdc09^` からバイト単位で復元し、**1.0.4 として配信済み**（その後 1.0.5・1.0.6 も配信済み。下の版数の項を参照）。
 ★★ **移行案内はもう届けた。**「撃てる弾が1発だけ残っている」という状態ではない。
 
 ★ このファイルには 2026-09-04 まで「PUC は撤去済み・0件」「`dist` は 1.0.3 のまま凍結」「撃てる弾は1発だけ」と
@@ -289,8 +328,19 @@ $GLOBALS['wp_textdomain_registry']->get( 'etbs-edit-conflict-guard', 'ja' );
 その誤情報は「もう経路は無い」という結論を導き、正本 §1 が禁じている `dist` の private 化・削除への
 入口になる。**数字を書くときは、その場でコマンドを走らせてから書くこと。**
 
-→ したがって **`dist` の版数を上げてよいのは ①セキュリティ修正 ②新しい WP での動作不能 の2つだけ**
-（`~/.claude/etbs-plugin-rules.md` §1）。
+→ `etbs-plugin-rules.md` §1 は **`dist` の版数を上げてよい条件を ①セキュリティ修正 ②新しい WP での動作不能 の2つ**
+としている。★★ **実績はこの2つに収まっていない。** `git log origin/dist` と `origin/dist:readme.txt` の Changelog で見ると、
+
+| 版 | 日付 | 中身 | ①② か |
+|---|---|---|---|
+| 1.0.4 | 2026-09-02 | wp.org 版への移行案内を届ける（ロックの挙動は変更なし） | どちらでもない |
+| 1.0.5 | 2026-09-23 | 自動保存でロックが解放され、保護が無症状で消える欠陥の修正（#305） | どちらでもない |
+| 1.0.6 | 2026-10-02 | ブロックエディタでメタボックスの入力が保存されない欠陥の修正（#16・1.0.5 で入った欠陥） | どちらでもない |
+
+→ **「2つだけ」と読んで、欠陥修正の版を出す判断を止めないこと。逆に、2つに収まらないから自由に上げてよい、でもない。**
+上げる／上げないは**人が決める**（engine を止めてから）。実装の PR で版数を上げない規定（本節の冒頭）は変わらない。
+★ 1.0.5 のコミット（`1bb90c0`）には「これが dist 系列の最後の版。以後版を切らない」とあるが、その後 1.0.6 が出ている。
+**「最後の版」を根拠に欠陥修正の移植を見送らないこと。**
 
 ★★★ **改名によって「引き渡し」は成立しなくなった（2026-08-31）。**
 
