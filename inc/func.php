@@ -901,23 +901,6 @@ if ( ! function_exists( 'edlk_rest_pre_insert_gate' ) ) {
 		// REST の保存では解放に使わなくなったが（edlk_release_after_save() 参照）、
 		// 将来その分岐を戻したときに黙って壊れないよう呼び出しは残す.
 		$session_id = edlk_sanitize_session_id( (string) $request->get_header( 'x_edlk_session' ) );
-
-		/*
-		 * The block editor's meta box save: when the form field is empty, read the X-Edlk-Session header.
-		 * Core sends the meta box save through apiFetch, and this plugin's script adds the header to every
-		 * apiFetch (since 1.1.0), so even an edit screen opened before an update, which still runs the
-		 * old script that does not put the ID into the form, carries it. That lets a second tab of the
-		 * same account be judged by its ID in WordPress 6.3 and earlier, where the meta box save is sent
-		 * even when the REST save was stopped.
-		 * ブロックエディタのメタボックス保存では、フォームの欄が空なら X-Edlk-Session ヘッダを読む。
-		 * コアはこの保存を apiFetch で送り、このプラグインのスクリプトは 1.1.0 以降すべての apiFetch に
-		 * このヘッダを足している。そのため、ID をフォームに入れない古いスクリプトのまま、更新前から
-		 * 開いていた編集画面でも ID を持っている。WordPress 6.3 以前は REST 保存が止められてもメタボックス
-		 * 保存が送られるが、同じアカウントの2枚目のタブをここで ID により判定できる。
-		 */
-		if ( '' === $session_id && edlk_is_meta_box_loader_request() && isset( $_SERVER['HTTP_X_EDLK_SESSION'] ) ) {
-			$session_id = edlk_sanitize_session_id( sanitize_text_field( wp_unslash( $_SERVER['HTTP_X_EDLK_SESSION'] ) ) );
-		}
 		edlk_current_session_id( $session_id );
 
 		if ( '' !== $session_id && Etbs_Ecg_Lock_Manager::is_holder( $post_id, $session_id ) ) {
