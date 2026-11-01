@@ -342,6 +342,9 @@ class Test_Etbs_Ecg_Hook_Wiring extends Etbs_Ecg_Test_Case {
 
 		foreach ( $test_cases as $case ) {
 			$this->clear_locks();
+			// The stored session ID is a function-level static, so it must not leak from the previous case.
+			// 保持しているセッション ID は関数内 static なので、前のケースから漏らさない.
+			edlk_current_session_id( '' );
 			delete_option( 'edlk_excluded_post_types' );
 			if ( ! empty( $case['excluded'] ) ) {
 				update_option( 'edlk_excluded_post_types', array( 'post' ) );
@@ -360,8 +363,10 @@ class Test_Etbs_Ecg_Hook_Wiring extends Etbs_Ecg_Test_Case {
 				$this->insert_lock( $post_id, 'S1', $this->holder_id( $case['lock'] ), ! empty( $case['expired'] ) );
 			}
 			$this->probe_after_gate_ran = false;
-			// Priority 2 is just after the gate (1). A gate moved to 2 or later no longer stops a save before this.
-			// 優先度 2 はゲート（1）の直後。ゲートが 2 以降へ動くと、この探針より前に保存を止められなくなる.
+			// Priority 2 is just after the gate (1). A gate moved to 3 or later no longer stops a save before this probe.
+			// Moved to exactly 2 it still runs first (registered earlier), so only the assertSame( 1, ... ) in test_hook_registration catches that.
+			// 優先度 2 はゲート（1）の直後。ゲートが 3 以降へ動くと、この探針より前に保存を止められなくなる。
+			// ちょうど 2 なら先に登録されている分ゲートが先に走るので、この探針では拾えず、test_hook_registration の assertSame( 1, ... ) が拾う.
 			add_action( 'pre_post_update', array( $this, 'mark_probe_after_gate' ), 2 );
 
 			$status = $this->run_edit_post( $post_id, $case['meta_box'], $case['session'] );
